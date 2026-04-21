@@ -45,12 +45,13 @@ st.markdown("""
     [data-testid="stAppDeployButton"] { display: none !important; }
     footer { visibility: hidden !important; }
     #MainMenu { visibility: hidden !important; }
-    header { visibility: hidden !important; }
+    header { display: none !important; }
     
-    /* Target the 'Manage app' and status sections in the bottom-right */
-    [data-testid="stStatusWidget"], [data-testid="stConnectionStatus"] { display: none !important; }
+    /* Target the 'Manage app' button and bottom toolbar badges specifically */
+    [data-testid="stStatusWidget"], [data-testid="stConnectionStatus"], .viewerBadge_v1 { display: none !important; }
     .stAppDeployButton { display: none !important; }
-    button[data-testid="stBaseButton-secondary"] { display: none !important; } /* Sometimes used for Manage App */
+    button[data-testid="stBaseButton-secondary"] { display: none !important; }
+    div[class*="viewerBadge"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -122,13 +123,13 @@ with tab_farmer:
     }
 
     if loc_mode == "GPS Precision (30m)":
-        # JavaScript for Dynamic Geolocation (Iframe Safe)
+        # JavaScript for Dynamic Geolocation (Plan C: Robust Reload)
         st.markdown("""
             <script>
             function getLocation() {
                 const btn = document.getElementById("loc-btn");
                 if (btn) {
-                    btn.innerHTML = "⏳ Detecting Location...";
+                    btn.innerHTML = "⏳ Scanning Satellites...";
                     btn.style.opacity = "0.7";
                 }
                 
@@ -136,15 +137,21 @@ with tab_farmer:
                     navigator.geolocation.getCurrentPosition(function(position) {
                         const lat = position.coords.latitude;
                         const lon = position.coords.longitude;
-                        // Use window.location.href to update the iframe URL
+                        
+                        alert("📍 Location Detected! Clicking OK will reload your farm profile with high-precision data.");
+                        
+                        // Robust redirect: Tries to update query params manually
                         const baseUrl = window.location.origin + window.location.pathname;
-                        window.location.href = baseUrl + "?lat=" + lat + "&lon=" + lon;
+                        const newUrl = baseUrl + "?lat=" + lat + "&lon=" + lon;
+                        window.location.assign(newUrl);
                     }, function(error) {
                         if (btn) btn.innerHTML = "📍 Use My Current Location";
-                        alert("Permission Denied: Please enable Location Access in your browser settings to use this feature.");
+                        let msg = "Location error: " + error.message;
+                        if (error.code === 1) msg = "Permission Denied. Please enable Location/GPS in your browser settings.";
+                        alert(msg);
                     }, {
                         enableHighAccuracy: true,
-                        timeout: 5000,
+                        timeout: 10000,
                         maximumAge: 0
                     });
                 } else {
@@ -160,6 +167,9 @@ with tab_farmer:
                 transition: all 0.3s ease;">
                 📍 Use My Current Location
             </button>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <a href="/" style="color: #64748b; font-size: 0.8rem; text-decoration: none;">🔄 Reset Location</a>
+            </div>
         """, unsafe_allow_html=True)
 
         g_col1, g_col2 = st.columns(2)
