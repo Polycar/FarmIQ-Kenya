@@ -40,20 +40,27 @@ st.markdown("""
     .pill-bad { background: #fee2e2; color: #b91c1c; }
     .pill-good { background: #dcfce3; color: #15803d; }
     
-    /* Aggressively hide Streamlit elements for a professional look */
+    /* Aggressively hide all Streamlit elements for a professional look */
     [data-testid="stHeader"] { display: none !important; }
     [data-testid="stAppDeployButton"] { display: none !important; }
     footer { visibility: hidden !important; }
     #MainMenu { visibility: hidden !important; }
     header { visibility: hidden !important; }
-    .st-emotion-cache-18ni7ap { display: none !important; } /* Additional cleanup for toolbar */
+    
+    /* Target the 'Manage app' and status sections in the bottom-right */
+    [data-testid="stStatusWidget"], [data-testid="stConnectionStatus"] { display: none !important; }
+    .stAppDeployButton { display: none !important; }
+    button[data-testid="stBaseButton-secondary"] { display: none !important; } /* Sometimes used for Manage App */
 </style>
 """, unsafe_allow_html=True)
 
 # --- Geolocation Helper (Query Params) ---
 qp = st.query_params
-q_lat = float(qp.get("lat", 0.0))
-q_lon = float(qp.get("lon", 0.0))
+try:
+    q_lat = float(qp.get("lat", 0.0))
+    q_lon = float(qp.get("lon", 0.0))
+except (ValueError, TypeError):
+    q_lat, q_lon = 0.0, 0.0
 
 # --- Language Mapping ---
 LANGS = {
@@ -115,31 +122,42 @@ with tab_farmer:
     }
 
     if loc_mode == "GPS Precision (30m)":
-        # JavaScript for Dynamic Geolocation
+        # JavaScript for Dynamic Geolocation (Iframe Safe)
         st.markdown("""
             <script>
             function getLocation() {
+                const btn = document.getElementById("loc-btn");
+                if (btn) {
+                    btn.innerHTML = "⏳ Detecting Location...";
+                    btn.style.opacity = "0.7";
+                }
+                
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(function(position) {
                         const lat = position.coords.latitude;
                         const lon = position.coords.longitude;
-                        const url = new URL(window.location.href);
-                        url.searchParams.set("lat", lat);
-                        url.searchParams.set("lon", lon);
-                        window.top.location.href = url.href;
+                        // Use window.location.href to update the iframe URL
+                        const baseUrl = window.location.origin + window.location.pathname;
+                        window.location.href = baseUrl + "?lat=" + lat + "&lon=" + lon;
                     }, function(error) {
-                        alert("Error getting location: " + error.message);
+                        if (btn) btn.innerHTML = "📍 Use My Current Location";
+                        alert("Permission Denied: Please enable Location Access in your browser settings to use this feature.");
+                    }, {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
                     });
                 } else {
                     alert("Geolocation is not supported by this browser.");
                 }
             }
             </script>
-            <button onclick="getLocation()" style="
+            <button id="loc-btn" onclick="getLocation()" style="
                 background: linear-gradient(135deg, #e74c3c, #c0392b); color:white; border:none;
                 padding:15px 20px; border-radius:12px;
                 font-size:16px; width:100%; cursor:pointer; font-weight: bold;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;
+                transition: all 0.3s ease;">
                 📍 Use My Current Location
             </button>
         """, unsafe_allow_html=True)
