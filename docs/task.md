@@ -1,0 +1,30 @@
+# FarmIQ Kenya MVP Tasks
+
+- `[x]` **Phase 1: Automated Data Extraction**
+  - `[x]` Create project workspace.
+  - `[x]` Install necessary Python libraries (`pandas`, `geopandas`, `rasterstats`, `streamlit`).
+  - `[x]` Download Kenyan county shapefiles.
+  - `[x]` Write python script to fetch/process `iSDAsoil` COGs for pH, N, P, K, Carbon.
+  - `[x]` Export `kenya_county_soils.csv`.
+- `[x]` **Phase 2: Agronomic Recommendation Engine**
+  - `[x]` Implement `recommender.py` logic.
+  - `[x]` Test rule engine with sample inputs.
+- `[x]` **Phase 3: Streamlit Web App**
+  - `[x]` Develop `app.py` UI and integrate data/logic.
+  - `[x]` Verify UI looks good and works cleanly.
+- `[x]` **Phase 4: Walkthrough and Delivery**
+  - `[x]` Create walkthrough documentation.
+- `[x]` **Phase 5: Localization & PDF Export**
+  - `[x]` Add Swahili language support.
+  - `[x]` Implement WhatsApp share button.
+  - `[x]` Develop professional PDF report generator.
+  - `[x]` Add acreage-based cost calculations.
+- `[x]` **Phase 6: B2B Dashboard & Persistence**
+  - `[x]` Implement SQLite persistence layer.
+  - `[x]` Create Extension Officer Dashboard.
+  - `[x]` Add secure access code protection for officers.
+- `[x]` **Phase 7: SMS Fallback Simulator**
+  - `[x]` Implement SMS summarization logic.
+  - `[x]` Create mock phone UI component.
+- `[x]` **Phase 8: Final Delivery**
+  - `[x]` Finalize walkthrough and documentation.

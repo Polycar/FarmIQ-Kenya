@@ -1,0 +1,6 @@
+streamlit
+rasterio
+pandas
+numpy
+fpdf2
+SQLAlchemy

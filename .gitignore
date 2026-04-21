@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Local Data (Excluding large rasters >100MB)
+data/rasters/kenya_ph.tif
+*.db
+farmiq.db
+
+# System
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
