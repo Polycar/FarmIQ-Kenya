@@ -40,10 +40,13 @@ st.markdown("""
     .pill-bad { background: #fee2e2; color: #b91c1c; }
     .pill-good { background: #dcfce3; color: #15803d; }
     
-    /* Hide Streamlit elements for a professional look */
-    [data-testid="stAppDeployButton"] { display: none; }
-    footer { visibility: hidden; }
-    #MainMenu { visibility: hidden; }
+    /* Aggressively hide Streamlit elements for a professional look */
+    [data-testid="stHeader"] { display: none !important; }
+    [data-testid="stAppDeployButton"] { display: none !important; }
+    footer { visibility: hidden !important; }
+    #MainMenu { visibility: hidden !important; }
+    header { visibility: hidden !important; }
+    .st-emotion-cache-18ni7ap { display: none !important; } /* Additional cleanup for toolbar */
 </style>
 """, unsafe_allow_html=True)
 
