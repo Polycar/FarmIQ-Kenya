@@ -39,8 +39,18 @@ st.markdown("""
     .data-pill { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; margin: 0.25rem; }
     .pill-bad { background: #fee2e2; color: #b91c1c; }
     .pill-good { background: #dcfce3; color: #15803d; }
+    
+    /* Hide Streamlit elements for a professional look */
+    [data-testid="stAppDeployButton"] { display: none; }
+    footer { visibility: hidden; }
+    #MainMenu { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
+
+# --- Geolocation Helper (Query Params) ---
+qp = st.query_params
+q_lat = float(qp.get("lat", 0.0))
+q_lon = float(qp.get("lon", 0.0))
 
 # --- Language Mapping ---
 LANGS = {
@@ -87,7 +97,7 @@ with tab_farmer:
     with col_mode1:
         loc_mode = st.radio("Location Mode", ["GPS Precision (30m)", "County Average"], horizontal=True)
     with col_mode2:
-        lab_mode = st.toggle("🧪 Expert Lab Mode (Ground Truth)", help="Enable for meter-level accuracy.")
+        lab_mode = st.toggle("🧪 Add My Soil Test Results (Optional)", help="Enable if you have a recent laboratory report.")
 
     lat, lon, selected_county = None, None, None
 
@@ -102,9 +112,38 @@ with tab_farmer:
     }
 
     if loc_mode == "GPS Precision (30m)":
+        # JavaScript for Dynamic Geolocation
+        st.markdown("""
+            <script>
+            function getLocation() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        const url = new URL(window.location.href);
+                        url.searchParams.set("lat", lat);
+                        url.searchParams.set("lon", lon);
+                        window.top.location.href = url.href;
+                    }, function(error) {
+                        alert("Error getting location: " + error.message);
+                    });
+                } else {
+                    alert("Geolocation is not supported by this browser.");
+                }
+            }
+            </script>
+            <button onclick="getLocation()" style="
+                background: linear-gradient(135deg, #e74c3c, #c0392b); color:white; border:none;
+                padding:15px 20px; border-radius:12px;
+                font-size:16px; width:100%; cursor:pointer; font-weight: bold;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;">
+                📍 Use My Current Location
+            </button>
+        """, unsafe_allow_html=True)
+
         g_col1, g_col2 = st.columns(2)
-        with g_col1: lat = st.number_input("Latitude", value=0.0, format="%.4f")
-        with g_col2: lon = st.number_input("Longitude", value=0.0, format="%.4f")
+        with g_col1: lat = st.number_input("Latitude", value=q_lat if q_lat != 0.0 else 0.0, format="%.4f")
+        with g_col2: lon = st.number_input("Longitude", value=q_lon if q_lon != 0.0 else 0.0, format="%.4f")
         
         if lat != 0.0 or lon != 0.0:
             selected_county = engine.detect_county(lat, lon)
@@ -112,7 +151,7 @@ with tab_farmer:
             insight = INSIGHTS.get(selected_county, "💡 **Precision Active**: Satellite mapping at 30m resolution is active for this location.")
             st.info(insight)
         else:
-            st.warning("📍 Enter GPS coordinates to begin.")
+            st.warning("📍 Enter GPS coordinates or use the button above to begin.")
     else:
         county_list = sorted(engine.soil_data["County"].unique().tolist())
         selected_county = st.selectbox(t["county"], ["Select County..."] + county_list, index=0)
