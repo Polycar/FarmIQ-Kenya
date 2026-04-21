@@ -40,18 +40,15 @@ st.markdown("""
     .pill-bad { background: #fee2e2; color: #b91c1c; }
     .pill-good { background: #dcfce3; color: #15803d; }
     
-    /* Aggressively hide all Streamlit elements for a professional look */
-    [data-testid="stHeader"] { display: none !important; }
-    [data-testid="stAppDeployButton"] { display: none !important; }
-    footer { visibility: hidden !important; }
-    #MainMenu { visibility: hidden !important; }
-    header { display: none !important; }
+    /* Ultimate owner-view suppression: hide everything that isn't the app itself */
+    [data-testid="stHeader"], [data-testid="stAppDeployButton"], footer, header, #MainMenu { display: none !important; }
     
-    /* Target the 'Manage app' button and bottom toolbar badges specifically */
-    [data-testid="stStatusWidget"], [data-testid="stConnectionStatus"], .viewerBadge_v1 { display: none !important; }
+    /* Target the 'Manage app' button and bottom toolbar badges using wildcards */
+    div[class*="viewerBadge"], [data-testid="stStatusWidget"], [data-testid="stConnectionStatus"] { display: none !important; }
     .stAppDeployButton { display: none !important; }
     button[data-testid="stBaseButton-secondary"] { display: none !important; }
     div[class*="viewerBadge"] { display: none !important; }
+    [data-testid="collapsedControl"] { display: none !important; } /* Hide the sidebar toggle check */
 </style>
 """, unsafe_allow_html=True)
 
@@ -123,48 +120,34 @@ with tab_farmer:
     }
 
     if loc_mode == "GPS Precision (30m)":
-        # JavaScript for Dynamic Geolocation (Plan C: Robust Reload)
-        st.markdown("""
-            <script>
-            function getLocation() {
-                const btn = document.getElementById("loc-btn");
-                if (btn) {
-                    btn.innerHTML = "⏳ Scanning Satellites...";
-                    btn.style.opacity = "0.7";
-                }
-                
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(function(position) {
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        
-                        alert("📍 Location Detected! Clicking OK will reload your farm profile with high-precision data.");
-                        
-                        // Robust redirect: Tries to update query params manually
-                        const baseUrl = window.location.origin + window.location.pathname;
-                        const newUrl = baseUrl + "?lat=" + lat + "&lon=" + lon;
-                        window.location.assign(newUrl);
-                    }, function(error) {
-                        if (btn) btn.innerHTML = "📍 Use My Current Location";
-                        let msg = "Location error: " + error.message;
-                        if (error.code === 1) msg = "Permission Denied. Please enable Location/GPS in your browser settings.";
-                        alert(msg);
-                    }, {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 0
-                    });
-                } else {
-                    alert("Geolocation is not supported by this browser.");
-                }
-            }
-            </script>
-            <button id="loc-btn" onclick="getLocation()" style="
-                background: linear-gradient(135deg, #e74c3c, #c0392b); color:white; border:none;
-                padding:15px 20px; border-radius:12px;
-                font-size:16px; width:100%; cursor:pointer; font-weight: bold;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;
-                transition: all 0.3s ease;">
+        # JavaScript for Dynamic Geolocation (Plan D: Inline Fail-Safe)
+        # We put the logic directly in the onclick to bypass function scope issues
+        st.markdown(f"""
+            <button id="loc-btn" 
+                onclick="
+                    this.innerHTML = '⏳ Scanning...';
+                    this.style.opacity = '0.7';
+                    navigator.geolocation.getCurrentPosition(
+                        function(pos) {{
+                            const lat = pos.coords.latitude.toFixed(4);
+                            const lon = pos.coords.longitude.toFixed(4);
+                            alert('📍 Farm Located: ' + lat + ', ' + lon + '. Click OK to refresh your profile.');
+                            window.location.href = window.location.origin + window.location.pathname + '?lat=' + lat + '&lon=' + lon;
+                        }}, 
+                        function(err) {{
+                            document.getElementById('loc-btn').innerHTML = '📍 Use My Current Location';
+                            document.getElementById('loc-btn').style.opacity = '1';
+                            alert('Location Error: ' + err.message + '. Please ensure GPS is ON and permission is granted.');
+                        }}, 
+                        {{enableHighAccuracy: true, timeout: 10000}}
+                    );
+                " 
+                style="
+                    background: linear-gradient(135deg, #e74c3c, #c0392b); color:white; border:none;
+                    padding:15px 20px; border-radius:12px;
+                    font-size:16px; width:100%; cursor:pointer; font-weight: bold;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;
+                    transition: all 0.3s ease;">
                 📍 Use My Current Location
             </button>
             <div style="text-align: center; margin-bottom: 20px;">
