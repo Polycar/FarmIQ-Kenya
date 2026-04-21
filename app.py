@@ -6,6 +6,7 @@ from recommender import FarmIQRecommender
 from report_gen import generate_report_pdf
 from dealers import get_dealers_by_county
 from database import save_recommendation, get_all_records, get_stats
+from streamlit_geolocation import streamlit_geolocation
 
 # Set page config for mobile-friendly responsive layout
 st.set_page_config(
@@ -51,14 +52,6 @@ st.markdown("""
     [data-testid="collapsedControl"] { display: none !important; } /* Hide the sidebar toggle check */
 </style>
 """, unsafe_allow_html=True)
-
-# --- Geolocation Helper (Query Params) ---
-qp = st.query_params
-try:
-    q_lat = float(qp.get("lat", 0.0))
-    q_lon = float(qp.get("lon", 0.0))
-except (ValueError, TypeError):
-    q_lat, q_lon = 0.0, 0.0
 
 # --- Language Mapping ---
 LANGS = {
@@ -120,52 +113,28 @@ with tab_farmer:
     }
 
     if loc_mode == "GPS Precision (30m)":
-        # JavaScript for Dynamic Geolocation (Plan D: Inline Fail-Safe)
-        # We put the logic directly in the onclick to bypass function scope issues
-        st.markdown(f"""
-            <button id="loc-btn" 
-                onclick="
-                    this.innerHTML = '⏳ Scanning...';
-                    this.style.opacity = '0.7';
-                    navigator.geolocation.getCurrentPosition(
-                        function(pos) {{
-                            const lat = pos.coords.latitude.toFixed(4);
-                            const lon = pos.coords.longitude.toFixed(4);
-                            alert('📍 Farm Located: ' + lat + ', ' + lon + '. Click OK to refresh your profile.');
-                            window.location.href = window.location.origin + window.location.pathname + '?lat=' + lat + '&lon=' + lon;
-                        }}, 
-                        function(err) {{
-                            document.getElementById('loc-btn').innerHTML = '📍 Use My Current Location';
-                            document.getElementById('loc-btn').style.opacity = '1';
-                            alert('Location Error: ' + err.message + '. Please ensure GPS is ON and permission is granted.');
-                        }}, 
-                        {{enableHighAccuracy: true, timeout: 10000}}
-                    );
-                " 
-                style="
-                    background: linear-gradient(135deg, #e74c3c, #c0392b); color:white; border:none;
-                    padding:15px 20px; border-radius:12px;
-                    font-size:16px; width:100%; cursor:pointer; font-weight: bold;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px;
-                    transition: all 0.3s ease;">
-                📍 Use My Current Location
-            </button>
-            <div style="text-align: center; margin-bottom: 20px;">
-                <a href="/" style="color: #64748b; font-size: 0.8rem; text-decoration: none;">🔄 Reset Location</a>
-            </div>
-        """, unsafe_allow_html=True)
-
-        g_col1, g_col2 = st.columns(2)
-        with g_col1: lat = st.number_input("Latitude", value=q_lat if q_lat != 0.0 else 0.0, format="%.4f")
-        with g_col2: lon = st.number_input("Longitude", value=q_lon if q_lon != 0.0 else 0.0, format="%.4f")
+        st.markdown("##### 📍 Satellite Localization")
+        # Use the specialized Streamlit Component for reliable mobile GPS
+        location = streamlit_geolocation()
         
-        if lat != 0.0 or lon != 0.0:
+        if location and location.get("latitude"):
+            lat = round(location["latitude"], 4)
+            lon = round(location["longitude"], 4)
+            st.success(f"✅ GPS Signal Locked: {lat}, {lon}")
             selected_county = engine.detect_county(lat, lon)
             st.caption(f"🌍 Detected: **{selected_county} County**")
             insight = INSIGHTS.get(selected_county, "💡 **Precision Active**: Satellite mapping at 30m resolution is active for this location.")
             st.info(insight)
         else:
-            st.warning("📍 Enter GPS coordinates or use the button above to begin.")
+            st.warning("👆 Click the button above to capture your farm's GPS coordinates.")
+            # Manual fallback
+            with st.expander("⌨️ Enter Coordinates Manually"):
+                g_col1, g_col2 = st.columns(2)
+                with g_col1: lat = st.number_input("Latitude", value=0.0, format="%.4f")
+                with g_col2: lon = st.number_input("Longitude", value=0.0, format="%.4f")
+                if lat != 0.0 or lon != 0.0:
+                    selected_county = engine.detect_county(lat, lon)
+                    st.caption(f"🌍 Detected: **{selected_county} County**")
     else:
         county_list = sorted(engine.soil_data["County"].unique().tolist())
         selected_county = st.selectbox(t["county"], ["Select County..."] + county_list, index=0)

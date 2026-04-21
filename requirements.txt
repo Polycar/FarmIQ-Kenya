@@ -4,3 +4,4 @@ pandas
 numpy
 fpdf2
 SQLAlchemy
+streamlit-geolocation
