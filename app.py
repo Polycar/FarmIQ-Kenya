@@ -230,7 +230,18 @@ with tab_farmer:
             with h_col2:
                 st.markdown(f"## 📊 {t['report_title']}")
                 soil = result["county_data"]
+                # Display Data Source for Transparency
+                ds_color = "#16a34a" if "Satellite" in result["data_source"] or "Satelaiti" in result["data_source"] else "#64748b"
+                st.markdown(f"""
+                <div style="background-color: {ds_color}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; width: fit-content; margin-bottom: 5px;">
+                    🧬 Source: {result['data_source']}
+                </div>
+                """, unsafe_allow_html=True)
                 st.caption(f"{t['mapping_source']} {selected_county} County")
+
+            # Warning if Precision Mode is falling back
+            if loc_mode == "GPS Precision (30m)" and "Baseline" in result["data_source"]:
+                st.info("💡 **Transparency Note**: High-resolution (30m) raster layer not found. App is using the validated Regional Baseline (CSV) as fallback.")
 
             with st.expander("🔬 How is this score calculated?"):
                 st.markdown("""

@@ -103,15 +103,18 @@ class FarmIQRecommender:
         reqs = self.crop_reqs.get(crop, self.crop_reqs["Maize"])
 
         # High-Resolution Override
+        data_source = "Regional Baseline (CSV)" if lang == "English" else "Msingi wa Eneo (CSV)"
         if lat and lon:
             hi_res_ph = self.get_high_res_ph(lat, lon)
             if hi_res_ph:
                 soil["pH"] = hi_res_ph
+                data_source = "30m Satellite Precision" if lang == "English" else "Usahihi wa Satelaiti (30m)"
 
         if overrides:
             for key in ["pH", "Total Nitrogen (mg/kg)", "Extractable Phosphorus (mg/kg)", "Extractable Potassium (mg/kg)"]:
                 if key in overrides and overrides[key] is not None:
                     soil[key] = overrides[key]
+            data_source = "Lab Override (Ground Truth)" if lang == "English" else "Matokeo ya Maabara"
 
         # --- SCIENTIFIC LOGIC: NUTRIENT GAP CALCULATION ---
         # Baseline Prices (2026 Est. KES per 50kg bag)
@@ -189,7 +192,7 @@ class FarmIQRecommender:
             "county_data": soil, "crop": crop, "current_fert": current_fert, "advice": advice,
             "budget": {"breakdown": breakdown, "total_budget": int(total_cost), "farm_size": farm_size_acres},
             "is_acidic": is_acidic, "is_n_low": is_n_low, "is_p_low": is_p_low, "is_k_low": is_k_low,
-            "health_score": health_score,
+            "health_score": health_score, "data_source": data_source,
             "comparison": {"current": current_fert, "recommended": comp_rec, "impact": "Optimized Recovery"}
         }
 
