@@ -259,21 +259,16 @@ with tab_farmer:
                 elif any(x in item for x in ["💡", "Msimu"]): st.info(item, icon="💡")
                 else: st.success(item, icon="✅")
 
-            # Shared Components (PDF, WhatsApp, SMS)
-            dealers = get_dealers_by_county(selected_county)
-            with st.expander(f"📍 {t['dealers_title']}"):
-                for d in dealers:
-                    st.markdown(f"**{d['name']}** ({d['town']})")
-                    maps_url = f"https://www.google.com/maps/search/?api=1&query={d['name'].replace(' ', '+')}+{d['town'].replace(' ', '+')}+Kenya"
-                    st.markdown(f'<a href="{maps_url}" target="_blank" style="text-decoration: none;"><div style="background-color: #007bff; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 1rem;">📍 Directions</div></a>', unsafe_allow_html=True)
+            # --- Action Buttons: WhatsApp & PDF & SMS ---
+            st.write("")
             
             # WhatsApp Share
+            st.markdown("### 📤 Share Results")
             detailed_summary = f"🌱 FarmIQ Soil Report ({selected_county})\n📊 Crop: {result['crop']}\n🧪 Health Score: {result['health_score']}/100\n🚜 Rec: {result['comparison']['recommended']}\n💰 Budget: KES {result['budget']['total_budget']:,}"
             import urllib.parse
-            st.markdown(f'<a href="https://api.whatsapp.com/send?text={urllib.parse.quote(detailed_summary)}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; padding: 0.75rem; border-radius: 8px; text-align: center; font-weight: bold;">{t["share"]}</div></a>', unsafe_allow_html=True)
-
+            st.markdown(f'<a href="https://api.whatsapp.com/send?text={urllib.parse.quote(detailed_summary)}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; padding: 0.75rem; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 10px;">✅ {t["share"]}</div></a>', unsafe_allow_html=True)
+            
             # PDF Download
-            st.write("")
             pdf_bytes = generate_report_pdf(result, lang_choice)
             st.download_button(
                 label=f"📄 {t['download_pdf']}",
@@ -283,9 +278,39 @@ with tab_farmer:
                 use_container_width=True
             )
 
-            # SMS Fallback Simulator
-            st.write("")
+            # SMS Fallback Simulator Toggle
             if st.button(f"📲 {t['sms_button']}", key="sms_btn", use_container_width=True):
+                st.session_state.show_sms = True
+            
+            # Shared Components (Dealers)
+            dealers = get_dealers_by_county(selected_county)
+            with st.expander(f"📍 {t['dealers_title']}"):
+                for d in dealers:
+                    st.markdown(f"**{d['name']}** ({d['town']})")
+                    maps_url = f"https://www.google.com/maps/search/?api=1&query={d['name'].replace(' ', '+')}+{d['town'].replace(' ', '+')}+Kenya"
+                    st.markdown(f'<a href="{maps_url}" target="_blank" style="text-decoration: none;"><div style="background-color: #007bff; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 1rem;">📍 Directions</div></a>', unsafe_allow_html=True)
+            
+            # --- Action Buttons: WhatsApp & PDF & SMS ---
+            st.write("")
+            st.markdown("### 📤 Share & Save")
+            
+            # WhatsApp Share
+            detailed_summary = f"🌱 FarmIQ Soil Report ({selected_county})\n📊 Crop: {result['crop']}\n🧪 Health Score: {result['health_score']}/100\n🚜 Rec: {result['comparison']['recommended']}\n💰 Budget: KES {result['budget']['total_budget']:,}"
+            import urllib.parse
+            st.markdown(f'<a href="https://api.whatsapp.com/send?text={urllib.parse.quote(detailed_summary)}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; padding: 0.75rem; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 10px;">✅ {t["share"]}</div></a>', unsafe_allow_html=True)
+            
+            # PDF Download
+            pdf_bytes = generate_report_pdf(result, lang_choice)
+            st.download_button(
+                label=f"📄 {t['download_pdf']}",
+                data=pdf_bytes,
+                file_name=f"FarmIQ_Report_{selected_county}_{datetime.datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+
+            # SMS Fallback Simulator Toggle (Using a unique key to prevent errors)
+            if st.button(f"📲 {t['sms_button']}", key="sms_sim_trigger", use_container_width=True):
                 st.session_state.show_sms = True
             
             if st.session_state.get('show_sms', False):
@@ -298,13 +323,13 @@ with tab_farmer:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button("Close SMS", key="close_sms"):
+                if st.button("Close SMS", key="close_sms_sim"):
                     st.session_state.show_sms = False
                     st.rerun()
 
-                # Attribution Footer
-                st.divider()
-                st.markdown('<div style="text-align: center; color: #64748b; font-size: 0.8rem;">📊 Data Source: iSDAsoil (2021) 30m Map | 🧪 Scientific Basis: Kenyan Agronomic Baselines</div>', unsafe_allow_html=True)
+            # Attribution Footer
+            st.divider()
+            st.markdown('<div style="text-align: center; color: #64748b; font-size: 0.8rem;">📊 Data Source: iSDAsoil (2021) 30m Map | 🧪 Scientific Basis: Kenyan Agronomic Baselines</div>', unsafe_allow_html=True)
 
 # Extension Dashboard
 if is_officer:
