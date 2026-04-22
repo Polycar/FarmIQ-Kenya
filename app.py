@@ -114,8 +114,18 @@ with tab_farmer:
 
     if loc_mode == "GPS Precision (30m)":
         st.markdown("##### 📍 Satellite Localization")
-        # Use the specialized Streamlit Component for reliable mobile GPS
-        location = streamlit_geolocation()
+        
+        # UI Tweak: Wrap in columns to add a text label next to the icon
+        geo_col1, geo_col2 = st.columns([1, 10])
+        with geo_col1:
+            location = streamlit_geolocation()
+        with geo_col2:
+            st.markdown(f"""
+                <div style="padding-top: 5px; font-weight: bold; color: #16a34a; cursor: pointer;" 
+                     onclick="document.querySelector('button[kind=secondary] span').click();">
+                    📍 Use My Current Location
+                </div>
+            """, unsafe_allow_html=True)
         
         if location and location.get("latitude"):
             lat = round(location["latitude"], 4)
