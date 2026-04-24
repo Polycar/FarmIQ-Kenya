@@ -220,7 +220,7 @@ with tab_farmer:
                     🧬 Source: {result['data_source']}
                 </div>
                 <div style="font-size: 0.8rem; color: #475569; margin-bottom: 10px;">
-                    📡 {result['confidence']}
+                    📡 {result.get('confidence', 'Moderate 🟡 (Based on regional averages)')}
                 </div>
                 """, unsafe_allow_html=True)
                 st.caption(f"{t['mapping_source']} {selected_county} County")
@@ -259,8 +259,9 @@ with tab_farmer:
 
             # The Switch (Comparison)
             st.markdown("### 🔄 The Switch: Impact Analysis")
-            comp = result['comparison']
-            st.markdown(f'<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;"><table style="width: 100%;"><tr><th>Feature</th><th>Your Habit ({comp["current"]})</th><th style="color: #16a34a;">FarmIQ Recommendation</th></tr><tr><td>Strategy</td><td style="color: #ef4444; font-size:0.9rem;">{comp["current_flaw"]}</td><td style="color: #16a34a; font-weight:bold;">{comp["recommended"]}</td></tr><tr><td>Outcome</td><td>Variable Yield</td><td style="color: #16a34a; font-weight:bold;">{comp["impact"]}</td></tr></table></div>', unsafe_allow_html=True)
+            comp = result.get('comparison', {})
+            current_flaw = comp.get("current_flaw", "Analysis pending")
+            st.markdown(f'<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;"><table style="width: 100%;"><tr><th>Feature</th><th>Your Habit ({comp.get("current", "")})</th><th style="color: #16a34a;">FarmIQ Recommendation</th></tr><tr><td>Strategy</td><td style="color: #ef4444; font-size:0.9rem;">{current_flaw}</td><td style="color: #16a34a; font-weight:bold;">{comp.get("recommended", "")}</td></tr><tr><td>Outcome</td><td>Variable Yield</td><td style="color: #16a34a; font-weight:bold;">{comp.get("impact", "")}</td></tr></table></div>', unsafe_allow_html=True)
 
             # Crop Calendar Timeline
             st.markdown("### 📅 Application Calendar")
