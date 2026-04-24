@@ -550,13 +550,13 @@ with tab_farmer:
             st.markdown(f'<a href="https://api.whatsapp.com/send?text={urllib.parse.quote(detailed_summary)}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; padding: 0.75rem; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 10px;">✅ {t["share"]}</div></a>', unsafe_allow_html=True)
             
             # PDF Download
-            pdf_bytes = generate_report_pdf(result, lang_choice)
             st.download_button(
                 label=f"📄 {t['download_pdf']}",
-                data=pdf_bytes,
+                data=generate_report_pdf(result, lang_choice),
                 file_name=f"FarmIQ_Report_{selected_county}_{datetime.datetime.now().strftime('%Y%m%d')}.pdf",
                 mime="application/pdf",
-                use_container_width=True
+                use_container_width=True,
+                type="primary" # Makes it stand out
             )
 
             # SMS Fallback Simulator Toggle (Using a unique key to prevent errors)
