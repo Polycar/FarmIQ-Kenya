@@ -92,17 +92,18 @@ with lang_col2:
     lang_choice = st.radio("Lugha", ["English", "Kiswahili"], horizontal=True, label_visibility="collapsed")
 t = LANGS[lang_choice]
 
-with st.sidebar:
-    st.markdown("### 🏛️ B2B Access")
-    access_code = st.text_input("Officer Access Code", type="password")
+    # Support both Sidebar and Main Page inputs via Session State
+    access_input = st.text_input("Officer Access Code", type="password", key="access_input_sidebar")
     officer_pw = st.secrets.get("OFFICER_PASSWORD", "OFFICER2026")
-    is_officer = (access_code.upper() == officer_pw.upper()) or (str(st.session_state.get("main_access")).upper() == officer_pw.upper())
+    
+    # Check all possible sources of the code
+    current_code = access_input or st.session_state.get("main_access", "")
+    is_officer = (str(current_code).upper() == officer_pw.upper())
     
     st.markdown("---")
     st.markdown("### 👨‍🌾 AI Agronomist Settings")
-    ai_key = st.text_input("Gemini API Key", type="password", help="Enter your Google Gemini API key to enable expert AI briefings.")
-    if not ai_key:
-        ai_key = st.session_state.get("main_ai") or st.secrets.get("GEMINI_API_KEY")
+    ai_input = st.text_input("Gemini API Key", type="password", key="ai_input_sidebar")
+    ai_key = ai_input or st.session_state.get("main_ai") or st.secrets.get("GEMINI_API_KEY")
 
 # Main Navigation
 if is_officer:
@@ -556,17 +557,21 @@ with tab_farmer:
             st.markdown('<div style="text-align: center; color: #64748b; font-size: 0.8rem;">📊 Data Source: iSDAsoil (2021) 30m Map | 🧪 Scientific Basis: Kenyan Agronomic Baselines</div>', unsafe_allow_html=True)
 
     # --- SETTINGS & ACCESS (Main Page) ---
+    st.write("")
     with st.expander("🛠️ Advanced Settings & Officer Login"):
         sf1, sf2 = st.columns(2)
         with sf1:
             st.markdown("### 🏛️ B2B Login")
-            st.text_input("Officer Access Code ", type="password", key="main_access", help="Enter password to unlock B2B Dashboard")
+            st.text_input("Officer Access Code", type="password", key="main_access", help="Enter password to unlock B2B Dashboard")
         with sf2:
             st.markdown("### 👨‍🌾 AI Setup")
-            st.text_input("Gemini API Key ", type="password", key="main_ai", help="Enter API key to unlock AI Agronomist")
-        if st.session_state.get("main_access") or st.session_state.get("main_ai"):
-            st.info("Credentials updated. Refreshing...")
-            st.rerun()
+            st.text_input("Gemini API Key", type="password", key="main_ai", help="Enter API key to unlock AI Agronomist")
+        
+        if is_officer:
+            st.success("✅ Officer Access Granted!")
+        if ai_key and len(str(ai_key)) > 10:
+            st.success("✅ AI Engine Connected!")
+
 
 
 # --- YIELD TRACKING TAB ---
