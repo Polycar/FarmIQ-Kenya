@@ -29,6 +29,12 @@ class FarmIQRecommender:
         cal_path = os.path.join(self.data_dir, 'crop_calendars.csv')
         if os.path.exists(cal_path):
             self.crop_calendars = pd.read_csv(cal_path)
+
+        # Load Top Dressing Rules
+        self.top_dress_rules = pd.DataFrame()
+        td_path = os.path.join(self.data_dir, 'top_dressing.csv')
+        if os.path.exists(td_path):
+            self.top_dress_rules = pd.read_csv(td_path)
         
         self.raster_path = os.path.join(os.path.dirname(__file__), "data", "rasters", "kenya_ph.tif")
         
@@ -227,17 +233,34 @@ class FarmIQRecommender:
         # 3. Stage 2: Top Dressing (Nitrogen focus)
         n_val = soil["Total Nitrogen (mg/kg)"]
         n_bags = 0
+        n_type = "CAN" if ph_val < 5.5 else "Urea"
         
-        # Dynamic Selection
-        if ph_val < 5.5:
-            n_type = "CAN"
+        # Check Top Dressing Rules
+        td_rule = self.top_dress_rules[self.top_dress_rules["Crop"] == crop] if not self.top_dress_rules.empty else pd.DataFrame()
+        
+        if not td_rule.empty:
+            rule = td_rule.iloc[0]
+            if pd.isna(rule["Product"]) or str(rule["Product"]) == "None":
+                n_bags = 0
+                if lang == "English": advice.append(f"💡 **Top Dress**: {rule['Instruction']}")
+                else: advice.append(f"💡 **Mbolea ya Kukuzia**: {rule['Instruction']}")
+            else:
+                n_gap = max(0, reqs["n_min"] - n_val)
+                if n_gap > 0.15: n_bags = 2.0
+                elif n_gap > 0.1: n_bags = 1.0
+                elif n_gap > 0: n_bags = 0.5
+                
+                if n_bags > 0:
+                    if lang == "English":
+                        advice.append(f"🚀 **Stage 2 (Top Dress)**: Apply {n_type} at **{rule['Timing']}**. {rule['Instruction']}")
+                    else:
+                        advice.append(f"🚀 **Hatua ya 2 (Kukuzia)**: Tumia {n_type} wakati wa **{rule['Timing']}**. {rule['Instruction']}")
         else:
-            n_type = "Urea"
-            
-        n_gap = max(0, reqs["n_min"] - n_val)
-        if n_gap > 0.15: n_bags = 2.0
-        elif n_gap > 0.1: n_bags = 1.0
-        elif n_gap > 0: n_bags = 0.5
+            # Fallback
+            n_gap = max(0, reqs["n_min"] - n_val)
+            if n_gap > 0.15: n_bags = 2.0
+            elif n_gap > 0.1: n_bags = 1.0
+            elif n_gap > 0: n_bags = 0.5
         
         if n_bags > 0:
             qty = n_bags * farm_size_acres
