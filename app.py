@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v48():
+def load_farmiq_engine_v49():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v48()
+engine = load_farmiq_engine_v49()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -640,7 +640,7 @@ with tab_yield:
 # Extension Dashboard
 if is_officer:
     with tab_officer:
-        st.error("🚀 SYSTEM VERSION 48 - INDENTATION FIXED")
+        st.error("🚀 SYSTEM VERSION 49 - DATA LINK FIXED")
         st.title("📊 Dashboard")
         
         # --- INVESTOR MODE: NATIONAL LAND FINDER (STRIPPED DOWN) ---
@@ -654,7 +654,7 @@ if is_officer:
             st.write(f"Analyzing all counties for {search_crop}...")
             # Results logic
             national_results = []
-            all_counties = engine.county_data['County'].unique()
+            all_counties = engine.data['County'].unique()
             pbar = st.progress(0)
             for i, county in enumerate(all_counties):
                 pbar.progress((i + 1) / len(all_counties))
