@@ -466,11 +466,12 @@ with tab_farmer:
                         # Providing a map link for them gives wrong directions, so we just list them.
                         st.markdown(f"**{d['name']}** (Available at {selected_county} County Depot)")
                     else:
-                        # Specific local dealers: Provide a reliable Google Maps Directions link
+                        # Specific local dealers: Provide a reliable Google Maps Directions link from the FARM
                         st.markdown(f"**{d['name']}** ({d['town']})")
                         search_query = f"{d['name']} {d['town']} Kenya"
-                        maps_url = f"https://www.google.com/maps/dir/?api=1&destination={urllib.parse.quote_plus(search_query)}"
-                        st.markdown(f'<a href="{maps_url}" target="_blank" style="text-decoration: none;"><div style="background-color: #007bff; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 1rem;">🚗 Get Directions</div></a>', unsafe_allow_html=True)
+                        origin = f"{current_lat},{current_lon}"
+                        maps_url = f"https://www.google.com/maps/dir/?api=1&origin={origin}&destination={urllib.parse.quote_plus(search_query)}"
+                        st.markdown(f'<a href="{maps_url}" target="_blank" style="text-decoration: none;"><div style="background-color: #007bff; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 1rem;">🚗 Get Directions from Farm</div></a>', unsafe_allow_html=True)
             
             # --- Action Buttons: WhatsApp & PDF & SMS ---
             st.write("")
