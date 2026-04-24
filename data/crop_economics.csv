@@ -1,16 +1,26 @@
-Crop,ph_min,ph_max,n_need,p_need,k_need,price_per_kg,yield_per_acre
-Maize,5.5,7.0,high,high,medium,65,1500
-Beans,6.0,7.0,low,medium,low,110,800
-Potatoes,5.0,6.5,high,high,high,40,6000
-Tomatoes,6.0,7.0,high,high,high,100,8000
-Kale (Sukuma),5.5,7.0,high,medium,medium,36,6000
-Wheat,6.0,7.5,high,high,medium,115,1200
-Sorghum,5.0,6.5,low,low,low,80,1200
-Avocado,5.0,6.5,medium,medium,high,50,3000
-Tea,4.5,5.5,high,medium,medium,25,3000
-Finger Millet,5.0,6.5,low,low,low,100,600
-Cassava,5.0,6.5,low,low,medium,15,5000
-Sweet Potato,5.0,6.5,low,medium,high,25,4000
-Groundnuts,5.5,7.0,low,medium,medium,100,500
-Cowpeas,5.0,6.5,low,low,low,80,400
-Sunflower,6.0,7.5,medium,medium,medium,55,800
+Crop,ph_min,ph_max,n_need,p_need,k_need,price_per_kg,yield_per_acre,pref_texture
+Maize,5.5,7.0,high,high,medium,65,1500,Loam
+Beans,6.0,7.0,low,medium,low,110,800,Loam
+Potatoes,5.0,6.5,high,high,high,40,6000,Sandy Loam
+Tomatoes,6.0,7.0,high,high,high,100,8000,Loam
+Kale (Sukuma),5.5,7.0,high,medium,medium,36,6000,Clay Loam
+Wheat,6.0,7.5,high,high,medium,115,1200,Clay
+Sorghum,5.0,7.5,low,low,low,80,1200,Clay
+Avocado,5.0,6.5,medium,medium,high,50,3000,Sandy Loam
+Tea,4.5,5.5,high,medium,medium,25,3000,Clay
+Finger Millet,5.0,7.0,low,low,low,100,600,Sandy
+Cassava,5.0,8.0,low,low,medium,15,5000,Sandy
+Sweet Potato,5.0,7.0,low,medium,high,25,4000,Sandy Loam
+Groundnuts,5.5,7.0,low,medium,medium,120,500,Sandy
+Cowpeas,5.0,7.5,low,low,low,80,400,Sandy
+Sunflower,6.0,7.5,medium,medium,medium,55,800,Sandy
+Coffee (Arabica),5.0,6.0,high,medium,high,400,1000,Loam
+Macadamia,5.0,6.5,medium,medium,medium,150,2000,Loam
+Mangoes,5.5,7.5,low,low,medium,40,5000,Sandy
+Onions,6.0,7.0,high,high,medium,80,4000,Sandy Loam
+Cabbage,6.0,7.5,high,high,high,20,15000,Clay Loam
+Cotton,5.8,8.0,medium,medium,medium,60,1000,Clay
+Pigeon Peas,5.0,7.0,low,low,low,90,600,Sandy
+Rice (Upland),5.0,7.0,high,medium,medium,120,2000,Clay
+Sisal,5.5,8.5,low,low,low,100,1000,Sandy
+Pyrethrum,5.5,6.5,medium,high,medium,250,500,Loam

@@ -629,8 +629,9 @@ class FarmIQRecommender:
 
     def match_crops_to_soil(self, result, farm_acres=1.0, lang="English"):
         """
-        Scientific Crop Strategist.
-        Prioritizes crops that thrive in specific pH conditions (e.g. Acid-lovers in acidic soil).
+        Global Precision Agronomist (V42).
+        Aggressively discriminates between crops based on Chemical (pH, NPK) 
+        and Physical (Texture, OC) parameters + Weather.
         """
         if self.crop_econ.empty:
             return []
@@ -638,6 +639,7 @@ class FarmIQRecommender:
         soil = result.get("county_data", {})
         ph = soil.get("pH", 7.0)
         texture = soil.get("Texture", "Loam")
+        oc_val = soil.get("Organic Carbon (g/kg)", 20)
         
         # Current Weather Factor
         rain_val = 0.0
@@ -657,51 +659,52 @@ class FarmIQRecommender:
         for _, row in self.crop_econ.iterrows():
             crop = row["Crop"]
             
-            # 1. pH Affinity (Scientific Match)
+            # 1. Chemical Fit: pH (Aggressive Gaussian Penalty)
             ph_min, ph_max = row["ph_min"], row["ph_max"]
             ph_ideal = (ph_min + ph_max) / 2
+            # dist of 0.5 results in ~60% score. dist of 1.0 results in ~10% score.
+            ph_score = max(0, 1.0 - (abs(ph - ph_ideal) / 0.7)**2)
             
-            # Distance from IDEAL
-            dist = abs(ph - ph_ideal)
+            # 2. Physical Fit: Texture Affinity
+            # If the soil texture matches the crop's preferred texture, it gets a massive boost.
+            pref_tex = row.get("pref_texture", "Loam")
+            texture_score = 0.6 # Base
+            if pref_tex in texture or texture in pref_tex:
+                texture_score = 1.0
+            elif ("Sandy" in pref_tex and "Clay" in texture) or ("Clay" in pref_tex and "Sandy" in texture):
+                texture_score = 0.2 # Massive mismatch (e.g. Rice in Sand or Groundnuts in Heavy Clay)
             
-            # pH Score with a tighter penalty (Gaussian-style)
-            # This ensures that crops that 'prefer' the current pH get a massive boost
-            ph_score = max(0, 1.0 - (dist / 0.8)**2) 
+            # 3. Nutrient & Organic Fit
+            def n_fit(val, level):
+                target = 2.0 if level == "high" else (1.0 if level == "medium" else 0.5)
+                return min(val / target, 1.2) if val > 0 else 0.4
             
-            # 2. Nutrient Demand Fit
-            # If soil is low in P, crops with 'low' P demand get a slight advantage
-            def nutrient_fit(val, level):
-                if level == "low": return 1.0
-                if level == "medium": return 1.0 if val > 15 else 0.8
-                if level == "high": return 1.0 if val > 30 else 0.6
-                return 1.0
+            nut_score = (n_fit(n_val, row["n_need"]) + n_fit(p_val/20, row["p_need"]) + n_fit(k_val/200, row["k_need"])) / 3
             
-            n_fit = nutrient_fit(n_val * 10, row["n_need"])
-            p_fit = nutrient_fit(p_val, row["p_need"])
-            k_fit = nutrient_fit(k_val / 10, row["k_need"])
+            # OC Bonus: High organic carbon boosts scores for high-value crops (Coffee/Tea)
+            oc_bonus = 1.0
+            if oc_val > 25 and row["n_need"] == "high": oc_bonus = 1.1
+            if oc_val < 10: oc_bonus = 0.8
             
-            # 3. Toxicity Penalty (Aluminium is the biggest killer in acidic soil)
-            tox_penalty = 1.0
-            if al_val > 50 and ph < 5.5:
-                # If the crop is not acid-tolerant (Tea/Potatoes are tolerant)
-                if crop not in ["Tea", "Potatoes", "Cassava", "Avocado"]:
-                    tox_penalty = 0.5 # Severe penalty for non-tolerant crops in Al-rich soil
+            # 4. Toxicity & Weather Risk
+            risk_factor = 1.0
+            if al_val > 40 and ph < 5.5:
+                if crop not in ["Tea", "Potatoes", "Cassava", "Coffee (Arabica)"]: risk_factor *= 0.4
+            if rain_val > 120 and "Clay" in texture:
+                if crop in ["Maize", "Beans", "Sorghum"]: risk_factor *= 0.6
             
-            # 4. Weather & Texture
-            weather_fit = 1.0
-            if rain_val > 100 and "Clay" in texture:
-                if crop in ["Maize", "Beans", "Sorghum"]: weather_fit = 0.7
+            # Final Multi-Factor Score
+            # Weighting: pH (30%), Texture (30%), Nutrients (20%), Risk (20%)
+            match_score = (ph_score * 0.3 + texture_score * 0.3 + nut_score * 0.2 + risk_factor * 0.2) * oc_bonus * 100
             
-            # Final Match Score
-            # pH Affinity is now 60% of the weight to ensure Murang'a suggests Tea/Potatoes
-            match_score = (ph_score * 0.6 + (n_fit + p_fit + k_fit)/3 * 0.2 + tox_penalty * 0.1 + weather_fit * 0.1) * 100
+            # Clamp and format
+            match_score = min(max(match_score, 5), 99.0)
             
-            # Economic context
             gross_income = row["yield_per_acre"] * row["price_per_kg"] * farm_acres
             
-            if match_score >= 85: label = "🥇 EXCELLENT" if lang == "English" else "🥇 BORA SANA"
+            if match_score >= 88: label = "🥇 EXCELLENT" if lang == "English" else "🥇 BORA SANA"
             elif match_score >= 70: label = "🥈 VERY GOOD" if lang == "English" else "🥈 NZURI SANA"
-            elif match_score >= 50: label = "🥉 GOOD" if lang == "English" else "🥉 NZURI"
+            elif match_score >= 45: label = "🥉 GOOD" if lang == "English" else "🥉 NZURI"
             else: label = "⚠️ POOR" if lang == "English" else "⚠️ MBAYA"
             
             results.append({
@@ -711,7 +714,6 @@ class FarmIQRecommender:
                 "gross_income": int(gross_income)
             })
             
-        # Sort primarily by match score
         results.sort(key=lambda x: x["match_score"], reverse=True)
         return results[:5]
 
