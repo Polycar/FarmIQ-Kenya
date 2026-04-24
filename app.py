@@ -2,6 +2,7 @@ import os
 import streamlit as st
 import datetime
 import numpy as np
+import pandas as pd
 from recommender import FarmIQRecommender
 from report_gen import generate_report_pdf
 from dealers import get_dealers_by_county
