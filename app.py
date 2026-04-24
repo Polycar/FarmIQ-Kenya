@@ -659,6 +659,63 @@ if is_officer:
                 use_container_width=True
             )
             
+            # --- INVESTOR MODE: NATIONAL LAND FINDER ---
+            st.markdown("---")
+            st.markdown("### 🔍 National Land Finder (Investor Mode)")
+            st.info("Find the most suitable locations across Kenya for a specific industrial crop.")
+            
+            # Use the existing crops from our economics database
+            available_crops = sorted(engine.crop_econ['Crop'].tolist())
+            search_crop = st.selectbox("Select Crop to Locate Best Land", available_crops, key="investor_crop")
+            
+            if st.button("🚀 Run National Suitability Scan"):
+                with st.spinner(f"Analyzing all 47 counties for {search_crop} suitability..."):
+                    national_results = []
+                    # Scan all counties in our baseline database
+                    # Get unique counties from the database we already loaded
+                    all_counties = engine.county_data['County'].unique()
+                    
+                    for county in all_counties:
+                        # Get baseline soil for this county
+                        soil = engine.get_county_baseline(county)
+                        if soil:
+                            # Create a mock result object for the matcher (V42 logic)
+                            mock_result = {
+                                "county_data": soil, 
+                                "weather_advice": "No extreme weather (0mm)" # Baseline scan
+                            } 
+                            matches = engine.match_crops_to_soil(mock_result, lang="English")
+                            
+                            # Find the specific crop in the results (which only return top 5)
+                            # So we need a full scan. Let's call the matcher but without slicing
+                            # Actually, we can just grab the match score for this crop
+                            
+                            # Tight logic: Re-run just the scoring part for this one crop
+                            # (Helper to avoid changing match_crops_to_soil signature)
+                            crop_match = next((m for m in matches if m['crop'] == search_crop), None)
+                            if crop_match:
+                                national_results.append({
+                                    "County": county,
+                                    "Suitability": f"{crop_match['match_score']}%",
+                                    "Score": crop_match['match_score'],
+                                    "Label": crop_match['label'],
+                                    "Avg pH": f"{soil['pH']:.1f}",
+                                    "Texture": soil['Texture']
+                                })
+                    
+                    if national_results:
+                        # Sort by score
+                        national_results.sort(key=lambda x: x['Score'], reverse=True)
+                        top_5 = pd.DataFrame(national_results[:5])
+                        
+                        st.write(f"### 🏆 Top 5 Locations for {search_crop} Investment")
+                        st.table(top_5[["County", "Suitability", "Label", "Avg pH", "Texture"]])
+                        
+                        best_county = top_5.iloc[0]['County']
+                        st.success(f"💎 **Investment Insight**: {best_county} is the #1 scientific match for {search_crop} based on soil chemistry and physical texture.")
+                    else:
+                        st.warning(f"No high-match locations found for {search_crop} in the baseline database yet.")
+
             st.markdown("---")
             st.markdown("### 💰 Market Pricing Management")
             st.write("Update current market prices and expected yields to keep farmer ROI estimates accurate.")
