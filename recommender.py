@@ -165,6 +165,18 @@ class FarmIQRecommender:
             data_source = "Lab Override (Ground Truth)" if lang == "English" else "Matokeo ya Maabara"
             confidence = "Maximum 🔵 (Ground truth lab data)"
 
+        # --- SCIENTIFIC CONSTANTS: FERTILIZER ANALYSIS (%) ---
+        # Used to convert mg/kg gaps into exact bag counts (50kg)
+        ANALYSIS = {
+            "DAP": {"N": 0.18, "P": 0.46, "K": 0.0},
+            "CAN": {"N": 0.26, "P": 0.0, "K": 0.0},
+            "Urea": {"N": 0.46, "P": 0.0, "K": 0.0},
+            "NPK 17:17:17": {"N": 0.17, "P": 0.17, "K": 0.17},
+            "Mavuno": {"N": 0.10, "P": 0.26, "K": 0.10},
+            "SSP": {"N": 0.0, "P": 0.20, "K": 0.0},
+            "YaraMila Cereal": {"N": 0.23, "P": 0.23, "K": 0.0}
+        }
+
         # --- SCIENTIFIC LOGIC: NUTRIENT GAP CALCULATION ---
         mp = self.PRICES.get(price_mode, self.PRICES["Subsidized"])
 
@@ -214,33 +226,34 @@ class FarmIQRecommender:
                     "month_3": m3
                 }
 
-        # 3. Acidity & Liming
+        # 3. Acidity & Liming (Scientific: ~10 bags per 1.0 pH gap for correction)
         is_acidic = soil["pH"] < reqs["ph_min"]
         if ph_val < 5.5:
-            lime_bags = 2.0 * farm_size_acres
+            # Formula: Gap * 10 bags/acre
+            lime_bags = max(1.0, (5.5 - ph_val) * 10) * farm_size_acres
             breakdown.append(f"Basal Adj: {lime_bags:.1f} x bags Lime")
             total_cost += lime_bags * mp.get("Lime", 1800)
-            if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_val:.1f}. Apply Lime to unlock nutrients.")
-            else: advice.append(f"🚨 **Asidi Kali**: pH {ph_val:.1f}. Tumia chokaa kurekebisha udongo.")
+            if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_val:.1f}. Apply {lime_bags:.1f} bags of Lime to unlock nutrients.")
+            else: advice.append(f"🚨 **Asidi Kali**: pH {ph_val:.1f}. Tumia mifuko {lime_bags:.1f} ya chokaa kurekebisha udongo.")
         else:
             if lang == "English": advice.append(f"✅ **pH**: Healthy ({ph_val:.1f}).")
             else: advice.append(f"✅ **pH**: Hali Sawa ({ph_val:.1f}).")
 
-        # 4. Stage 1: Basal Calculation
+        # 4. Stage 1: Basal Calculation (1 mg/kg gap = 1 kg/acre nutrient needed)
         p_val = soil["Extractable Phosphorus (mg/kg)"]
-
         p_gap = max(0, reqs["p_min"] - p_val)
-        p_bags = 0
-        if p_gap > 20: p_bags = 2.0
-        elif p_gap > 10: p_bags = 1.0
-        elif p_gap > 0: p_bags = 0.5
         
-        if p_bags > 0:
+        # Calculate bags based on product concentration
+        # Formula: Gap / (Analysis * 50kg)
+        fert_p_analysis = ANALYSIS.get(p_type, {"P": 0.46})["P"]
+        p_bags = (p_gap / (fert_p_analysis * 50)) if fert_p_analysis > 0 else 0
+        
+        if p_bags > 0.1:
             qty = p_bags * farm_size_acres
             breakdown.append(f"Stage 1 (Basal): {qty:.1f} x bags {p_type}")
             total_cost += qty * mp.get(p_type, 2500)
 
-        # 5. Stage 2: Top Dressing (Nitrogen focus)
+        # 5. Stage 2: Top Dressing Calculation
         n_val = soil["Total Nitrogen (mg/kg)"]
         n_bags = 0
         
@@ -255,23 +268,23 @@ class FarmIQRecommender:
                 else: advice.append(f"💡 **Mbolea ya Kukuzia**: {rule['Instruction']}")
             else:
                 n_gap = max(0, reqs["n_min"] - n_val)
-                if n_gap > 0.15: n_bags = 2.0
-                elif n_gap > 0.1: n_bags = 1.0
-                elif n_gap > 0: n_bags = 0.5
+                # Formula: Gap / (Analysis * 50kg)
+                fert_n_analysis = ANALYSIS.get(n_type, {"N": 0.26})["N"]
+                n_bags = (n_gap / (fert_n_analysis * 50)) if fert_n_analysis > 0 else 0
                 
-                if n_bags > 0:
+                if n_bags > 0.1:
+                    qty = n_bags * farm_size_acres
                     if lang == "English":
-                        advice.append(f"🚀 **Stage 2 (Top Dress)**: Apply {n_type} at **{rule['Timing']}**. {rule['Instruction']}")
+                        advice.append(f"🚀 **Stage 2 (Top Dress)**: Apply {qty:.1f} bags {n_type} at **{rule['Timing']}**. {rule['Instruction']}")
                     else:
-                        advice.append(f"🚀 **Hatua ya 2 (Kukuzia)**: Tumia {n_type} wakati wa **{rule['Timing']}**. {rule['Instruction']}")
+                        advice.append(f"🚀 **Hatua ya 2 (Kukuzia)**: Tumia mifuko {qty:.1f} za {n_type} wakati wa **{rule['Timing']}**. {rule['Instruction']}")
         else:
             # Fallback
             n_gap = max(0, reqs["n_min"] - n_val)
-            if n_gap > 0.15: n_bags = 2.0
-            elif n_gap > 0.1: n_bags = 1.0
-            elif n_gap > 0: n_bags = 0.5
+            fert_n_analysis = ANALYSIS.get(n_type, {"N": 0.26})["N"]
+            n_bags = (n_gap / (fert_n_analysis * 50)) if fert_n_analysis > 0 else 0
         
-        if n_bags > 0:
+        if n_bags > 0.1:
             qty = n_bags * farm_size_acres
             breakdown.append(f"Stage 2 (Top Dress): {qty:.1f} x bags {n_type}")
             total_cost += qty * mp.get(n_type, 2500)
