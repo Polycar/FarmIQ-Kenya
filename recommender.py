@@ -107,6 +107,13 @@ class FarmIQRecommender:
         Fetches real-time soil properties from iSDAsoil API
         for a given GPS coordinate. Returns technical keys for explicit mapping.
         """
+        try:
+            # Ensure coordinates are clean floats
+            lat = float(lat)
+            lon = float(lon)
+        except (ValueError, TypeError):
+            return None
+
         properties = [
             "nitrogen_total",
             "phosphorus_extractable", 
@@ -128,7 +135,7 @@ class FarmIQRecommender:
                         "property": prop,
                         "depth": "0-20cm"
                     },
-                    timeout=5
+                    timeout=10 # Increased timeout for reliability
                 )
                 if response.status_code == 200:
                     data = response.json()
