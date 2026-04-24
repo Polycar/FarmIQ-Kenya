@@ -96,7 +96,7 @@ with st.sidebar:
     st.markdown("### 🏛️ B2B Access")
     access_code = st.text_input("Officer Access Code", type="password")
     officer_pw = st.secrets.get("OFFICER_PASSWORD", "OFFICER2026")
-    is_officer = (access_code == officer_pw) or (st.session_state.get("main_access") == officer_pw)
+    is_officer = (access_code.upper() == officer_pw.upper()) or (str(st.session_state.get("main_access")).upper() == officer_pw.upper())
     
     st.markdown("---")
     st.markdown("### 👨‍🌾 AI Agronomist Settings")
