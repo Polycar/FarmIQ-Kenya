@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v43():
+def load_farmiq_engine_v44():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v43()
+engine = load_farmiq_engine_v44()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -662,32 +662,25 @@ if is_officer:
             # --- INVESTOR MODE: NATIONAL LAND FINDER ---
             st.markdown("---")
             st.markdown("### 🔍 National Land Finder (Investor Mode)")
-            st.info("Find the most suitable locations across Kenya for a specific industrial crop.")
             
-            # Use the existing crops from our economics database
-            available_crops = sorted(engine.crop_econ['Crop'].tolist())
-            search_crop = st.selectbox("Select Crop to Locate Best Land", available_crops, key="investor_crop")
+            # Simple selectbox
+            available_crops = ["Maize", "Beans", "Potatoes", "Coffee (Arabica)", "Tea", "Macadamia", "Avocado", "Sorghum"]
+            search_crop = st.selectbox("Pick a crop to find best land:", available_crops)
             
-            if st.button("🚀 Run National Suitability Scan", use_container_width=True):
+            st.write("Checking system status... Ready to scan.")
+            
+            if st.button("🚀 START NATIONAL SCAN"):
                 national_results = []
                 all_counties = engine.county_data['County'].unique()
                 
-                progress_text = f"Analyzing all 47 counties for {search_crop}..."
-                my_bar = st.progress(0, text=progress_text)
+                my_bar = st.progress(0, text="Analyzing 47 counties...")
                 
                 for i, county in enumerate(all_counties):
-                    # Update progress
-                    my_bar.progress((i + 1) / len(all_counties), text=progress_text)
-                    
-                    # Get baseline soil for this county
+                    my_bar.progress((i + 1) / len(all_counties))
                     soil = engine.get_county_baseline(county)
                     if soil:
-                        mock_result = {
-                            "county_data": soil, 
-                            "weather_advice": "Neutral (0mm)" 
-                        } 
+                        mock_result = {"county_data": soil, "weather_advice": "0mm"} 
                         matches = engine.match_crops_to_soil(mock_result, lang="English")
-                        
                         crop_match = next((m for m in matches if m['crop'] == search_crop), None)
                         if crop_match:
                             national_results.append({
@@ -699,20 +692,26 @@ if is_officer:
                                 "Texture": soil['Texture']
                             })
                 
-                my_bar.empty() # Clear the bar when done
-                
+                my_bar.empty()
                 if national_results:
-                    # Sort by score
                     national_results.sort(key=lambda x: x['Score'], reverse=True)
-                    top_5 = pd.DataFrame(national_results[:5])
+                    st.table(pd.DataFrame(national_results[:5])[["County", "Suitability", "Label", "Avg pH", "Texture"]])
+                    st.success(f"💎 Best location for {search_crop}: {national_results[0]['County']}")
+                
+                my_bar.empty()
+                if national_results:
+                    national_results.sort(key=lambda x: x['Score'], reverse=True)
+                    # Removing duplicates if any from the double-tap logic
+                    unique_res = []
+                    seen = set()
+                    for r in national_results:
+                        if r['County'] not in seen:
+                            unique_res.append(r)
+                            seen.add(r['County'])
                     
-                    st.write(f"### 🏆 Top 5 Locations for {search_crop} Investment")
-                    st.table(top_5[["County", "Suitability", "Label", "Avg pH", "Texture"]])
-                    
-                    best_county = top_5.iloc[0]['County']
-                    st.success(f"💎 **Investment Insight**: {best_county} is the #1 scientific match for {search_crop} based on soil chemistry and physical texture.")
-                else:
-                    st.warning(f"No high-match locations found for {search_crop} in the baseline database yet.")
+                    st.write(f"### 🏆 Top 5 Locations for {search_crop}")
+                    st.table(pd.DataFrame(unique_res[:5])[["County", "Suitability", "Label", "Avg pH", "Texture"]])
+                    st.success(f"💎 Best location for {search_crop}: {unique_res[0]['County']}")
 
             st.markdown("---")
             st.markdown("### 💰 Market Pricing Management")
