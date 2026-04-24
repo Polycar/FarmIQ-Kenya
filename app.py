@@ -458,8 +458,9 @@ with tab_farmer:
             # --- Reverse Recommendation (Best Crop Matches) ---
             st.markdown(f"### 🌱 {('Crop Suitability Match' if lang_choice == 'English' else 'Mazao Yanayofaa Zaidi')}")
             with st.expander("🧐 View Best Matches for Your Soil", expanded=False):
-                matches = engine.match_crops_to_soil(result, farm_acres=farm_acres, lang=lang_choice)
-                if matches:
+                if hasattr(engine, 'match_crops_to_soil'):
+                    matches = engine.match_crops_to_soil(result, farm_acres=farm_acres, lang=lang_choice)
+                    if matches:
                     st.write("Based on your soil's pH and nutrient levels, here are the crops with the highest success probability:")
                     for m in matches:
                         col_m1, col_m2 = st.columns([2, 1])
@@ -685,7 +686,7 @@ if is_officer:
             st.markdown("---")
             st.markdown("### 💰 Market Pricing Management")
             st.write("Update current market prices and expected yields to keep farmer ROI estimates accurate.")
-            if not engine.crop_econ.empty:
+            if hasattr(engine, 'crop_econ') and not engine.crop_econ.empty:
                 edited_df = st.data_editor(engine.crop_econ, use_container_width=True, hide_index=True, key="econ_editor")
                 if st.button("💾 Save Market Updates", use_container_width=True):
                     econ_path = os.path.join(os.path.dirname(__file__), "data", "crop_economics.csv")
