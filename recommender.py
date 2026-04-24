@@ -195,17 +195,22 @@ class FarmIQRecommender:
             timeline.append({"week": "Week 8 (Boost)", "action": "Optional: Apply foliar spray to boost severe nutrient deficits."})
             
         # Comparison logic
-        comp_rec = f"{p_type} + {n_type}" if p_bags > 0 and n_bags > 0 else p_type if p_bags > 0 else n_type
+        if p_bags == 0 and n_bags == 0:
+            comp_rec = "None required (Optimal Soil)"
+        else:
+            comp_rec = f"{p_type} + {n_type}" if p_bags > 0 and n_bags > 0 else p_type if p_bags > 0 else n_type
         
         reason = "Generally meets requirements."
-        if current_fert == "CAN" and p_bags > 0:
+        if "CAN" in current_fert and p_bags > 0:
             reason = "Lacks Phosphorus needed for strong root development."
-        elif current_fert == "DAP" and n_bags > 0:
+        elif "DAP" in current_fert and n_bags > 0:
             reason = "Lacks sufficient Nitrogen for vegetative growth later."
-        elif current_fert in ["None", "Manure"]:
+        elif current_fert in ["None", "Manure"] and (p_bags > 0 or n_bags > 0):
             reason = "Nutrient density is too low for commercial yields."
         elif current_fert == "NPK":
             reason = "Generic blend. Ratio may not match your exact soil deficit."
+        elif p_bags == 0 and n_bags == 0:
+            reason = "Soil is optimal; current fertilizer is unnecessary."
             
         # Nutrient Status Flags for Database Compatibility
         is_n_low = n_val < 0.2
