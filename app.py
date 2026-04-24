@@ -107,28 +107,6 @@ with st.sidebar:
     ai_input = st.text_input("Gemini API Key", type="password", key="ai_input_sidebar")
     ai_key = ai_input or st.session_state.get("main_ai") or st.secrets.get("GEMINI_API_KEY")
 
-    # B2B Sidebar Tools
-    if is_officer:
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("### 🏢 Investor Mode (V46)")
-        search_crop = st.sidebar.selectbox("Industrial Crop Search:", ["Maize", "Tea", "Coffee (Arabica)", "Macadamia", "Avocado", "Rice (Upland)", "Cotton"], key="side_crop")
-        if st.sidebar.checkbox("🚀 ACTIVATE NATIONAL SCAN"):
-            st.sidebar.info(f"Scanning Kenya for {search_crop}...")
-            national_results = []
-            all_counties = engine.county_data['County'].unique()
-            for county in all_counties:
-                soil = engine.get_county_baseline(county)
-                if soil:
-                    mock_res = {"county_data": soil, "weather_advice": "0mm"} 
-                    matches = engine.match_crops_to_soil(mock_res, lang="English")
-                    m = next((x for x in matches if x['crop'] == search_crop), None)
-                    if m: national_results.append({"County": county, "Score": m['match_score'], "pH": soil['pH']})
-            
-            if national_results:
-                national_results.sort(key=lambda x: x['Score'], reverse=True)
-                top = national_results[0]
-                st.sidebar.success(f"Best: {top['County']} ({top['Score']}%)")
-                st.sidebar.info(f"🔍 INVESTOR REPORT: {search_crop} flourishes best in {top['County']} due to a mean pH of {top['pH']:.1f}.")
 
 # Main Navigation
 if is_officer:
@@ -662,7 +640,34 @@ with tab_yield:
 # Extension Dashboard
 if is_officer:
     with tab_officer:
+        st.error("🚀 SYSTEM VERSION 46 - INVESTOR MODE ACTIVE")
         st.title("📊 Dashboard")
+        
+        # --- INVESTOR MODE: NATIONAL LAND FINDER (TOP PRIORITY) ---
+        with st.expander("🔍 Industrial Land Finder (Investor Mode)", expanded=True):
+            st.info("Locate the most scientifically suitable land in Kenya for industrial expansion.")
+            search_crop = st.selectbox("Select Crop:", ["Maize", "Tea", "Coffee (Arabica)", "Macadamia", "Avocado", "Rice (Upland)", "Cotton"], key="main_investor_crop")
+            if st.button("🚀 RUN NATIONAL SUITABILITY SCAN", use_container_width=True):
+                national_results = []
+                all_counties = engine.county_data['County'].unique()
+                pbar = st.progress(0)
+                for i, county in enumerate(all_counties):
+                    pbar.progress((i + 1) / len(all_counties))
+                    soil = engine.get_county_baseline(county)
+                    if soil:
+                        res = {"county_data": soil, "weather_advice": "0mm"}
+                        matches = engine.match_crops_to_soil(res, lang="English")
+                        m = next((x for x in matches if x['crop'] == search_crop), None)
+                        if m: national_results.append({"County": county, "Score": m['match_score'], "pH": soil['pH'], "Texture": soil['Texture']})
+                
+                pbar.empty()
+                if national_results:
+                    national_results.sort(key=lambda x: x['Score'], reverse=True)
+                    st.write(f"### 🏆 Top 5 Locations for {search_crop}")
+                    st.table(pd.DataFrame(national_results[:5])[["County", "Score", "pH", "Texture"]])
+                    st.success(f"💎 Best Result: {national_results[0]['County']} ({national_results[0]['Score']}%)")
+
+        st.divider()
         stats = get_stats()
         if stats:
             st.metric("Total Queries", stats["total_queries"])
@@ -680,9 +685,7 @@ if is_officer:
                 use_container_width=True
             )
             
-            # --- INVESTOR MODE: NATIONAL LAND FINDER ---
             st.markdown("---")
-            st.error("🚀 SYSTEM VERSION 45 - DEBUG ACTIVE")
             st.markdown("### 💰 Market Pricing Management")
             st.write("Update current market prices and expected yields to keep farmer ROI estimates accurate.")
             
