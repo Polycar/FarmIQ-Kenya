@@ -18,11 +18,13 @@ class FarmIQRecommender:
             for _, row in cr_df.iterrows():
                 self.crop_reqs[row["Crop"]] = {
                     "ph_min": row["ph_min"], "n_min": row["n_min"],
-                    "p_min": row["p_min"], "k_min": row["k_min"]
+                    "p_min": row["p_min"], "k_min": row["k_min"],
+                    "oc_min": row.get("oc_min", 15.0),
+                    "foliar": int(row.get("foliar", 0))
                 }
         if not self.crop_reqs:
             # Fallback if CSV is missing
-            self.crop_reqs = {"Maize": {"ph_min": 5.5, "n_min": 1.2, "p_min": 20, "k_min": 150}}
+            self.crop_reqs = {"Maize": {"ph_min": 5.5, "n_min": 1.2, "p_min": 20, "k_min": 150, "oc_min": 15.0, "foliar": 0}}
         
         # Load Crop Calendars
         self.crop_calendars = pd.DataFrame()
@@ -190,7 +192,7 @@ class FarmIQRecommender:
         s_n = sig(soil["Total Nitrogen (g/kg)"], reqs["n_min"])
         s_p = sig(soil["Extractable Phosphorus (mg/kg)"], reqs["p_min"])
         s_k = sig(soil["Extractable Potassium (mg/kg)"], reqs["k_min"])
-        s_oc = sig(soil["Organic Carbon (g/kg)"], 15.0)
+        s_oc = sig(soil["Organic Carbon (g/kg)"], reqs["oc_min"])
         final_score = (s_ph * 0.4 + s_n * 0.15 + s_p * 0.15 + s_k * 0.15 + s_oc * 0.15) * 100
         return int(np.clip(final_score, 0, 100))
 
@@ -299,7 +301,7 @@ class FarmIQRecommender:
             p_type = "DAP"
         
         if crop != "Tea":
-            n_type = "CAN" if ph_val < 5.5 else "Urea"
+            n_type = "CAN" if ph_val < reqs["ph_min"] else "Urea"
 
         # --- Dynamic Biological Action Plan (Timeline) ---
         # Instead of static, we build this based on the crop's growth rate (Weeks)
@@ -368,9 +370,9 @@ class FarmIQRecommender:
         if is_acidic:
             # Formula: Gap * 10 bags/acre
             gap = reqs["ph_min"] - ph_val
-            lime_bags = max(1.0, gap * 10) * farm_size_acres
+            lime_bags = gap * 10 * farm_size_acres
             breakdown.append(f"Basal Adj: {lime_bags:.1f} x bags Lime")
-            total_cost += lime_bags * mp.get("Lime", 1800)
+            total_cost += lime_bags * mp.get("Lime", 0)
             if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_val:.1f} is too low for {crop}. Apply {lime_bags:.1f} bags of Lime.")
             else: advice.append(f"🚨 **Asidi Kali**: pH {ph_val:.1f} ni ya chini sana kwa {crop}. Tumia mifuko {lime_bags:.1f} ya chokaa.")
         else:
@@ -386,10 +388,10 @@ class FarmIQRecommender:
         fert_p_analysis = ANALYSIS.get(p_type, {"P": 0.46})["P"]
         p_bags = (p_gap / (fert_p_analysis * 50)) if fert_p_analysis > 0 else 0
         
-        if p_bags > 0.1:
+        if p_bags > 0:
             qty = p_bags * farm_size_acres
-            breakdown.append(f"Stage 1 (Basal): {qty:.1f} x bags {p_type}")
-            total_cost += qty * mp.get(p_type, 2500)
+            breakdown.append(f"Stage 1 (Basal): {qty:.2f} x bags {p_type}")
+            total_cost += qty * mp.get(p_type, 0)
 
         # 5. Stage 2: Top Dressing Calculation
         n_val = soil["Total Nitrogen (g/kg)"]
@@ -406,11 +408,10 @@ class FarmIQRecommender:
                 else: advice.append(f"💡 **Mbolea ya Kukuzia**: {rule['Instruction']}")
             else:
                 n_gap = max(0, reqs["n_min"] - n_val)
-                # Formula: Gap / (Analysis * 50kg)
                 fert_n_analysis = ANALYSIS.get(n_type, {"N": 0.26})["N"]
                 n_bags = (n_gap / (fert_n_analysis * 50)) if fert_n_analysis > 0 else 0
                 
-                if n_bags > 0.1:
+                if n_bags > 0:
                     qty = n_bags * farm_size_acres
                     if lang == "English":
                         advice.append(f"🚀 **Stage 2 (Top Dress)**: Apply {qty:.1f} bags {n_type} at **{rule['Timing']}**. {rule['Instruction']}")
@@ -422,16 +423,16 @@ class FarmIQRecommender:
             fert_n_analysis = ANALYSIS.get(n_type, {"N": 0.26})["N"]
             n_bags = (n_gap / (fert_n_analysis * 50)) if fert_n_analysis > 0 else 0
         
-        if n_bags > 0.01:
+        if n_bags > 0:
             qty = n_bags * farm_size_acres
             breakdown.append(f"Stage 2 (Top Dress): {qty:.2f} x bags {n_type}")
-            total_cost += qty * mp.get(n_type, 2500)
+            total_cost += qty * mp.get(n_type, 0)
 
-        # 6. Foliar Feed (Micronutrients for high-value crops)
-        if crop in ["Tomatoes", "Avocado", "Potatoes", "Kale (Sukuma)"]:
+        # 6. Foliar Feed (Data-driven from crop_requirements.csv)
+        if reqs.get("foliar", 0) == 1:
             foliar_qty = 1.0 * farm_size_acres
             breakdown.append(f"Foliar Feed: {foliar_qty:.1f} x Liters")
-            total_cost += foliar_qty * mp.get("Foliar Feed (1L)", 1400)
+            total_cost += foliar_qty * mp.get("Foliar Feed (1L)", 0)
             if lang == "English": advice.append(f"🍃 **Foliar Tip**: Apply Foliar Feed during flowering/fruiting for maximum quality.")
             else: advice.append(f"🍃 **Kidokezo**: Tumia mbolea ya majani wakati wa kutoa maua/matunda.")
 
@@ -469,9 +470,9 @@ class FarmIQRecommender:
         impact_cur = get_reason("Impact_Variable")
             
         # Nutrient Status Flags for Database Compatibility
-        is_n_low = n_val < 0.2
-        is_p_low = p_val < 30
-        is_k_low = soil["Extractable Potassium (mg/kg)"] < 150
+        is_n_low = n_val < reqs["n_min"]
+        is_p_low = p_val < reqs["p_min"]
+        is_k_low = k_val < reqs["k_min"]
 
         return {
             "county_data": soil, "crop": crop, "current_fert": current_fert, "advice": advice, "timeline": timeline, "reqs": reqs,
