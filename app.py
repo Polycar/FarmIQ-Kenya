@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v47():
+def load_farmiq_engine_v48():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v47()
+engine = load_farmiq_engine_v48()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -640,7 +640,7 @@ with tab_yield:
 # Extension Dashboard
 if is_officer:
     with tab_officer:
-        st.error("🚀 SYSTEM VERSION 47 - RADIO SCAN ACTIVE")
+        st.error("🚀 SYSTEM VERSION 48 - INDENTATION FIXED")
         st.title("📊 Dashboard")
         
         # --- INVESTOR MODE: NATIONAL LAND FINDER (STRIPPED DOWN) ---
@@ -653,24 +653,24 @@ if is_officer:
         if run_scan == "Yes - Run National Scan":
             st.write(f"Analyzing all counties for {search_crop}...")
             # Results logic
-                national_results = []
-                all_counties = engine.county_data['County'].unique()
-                pbar = st.progress(0)
-                for i, county in enumerate(all_counties):
-                    pbar.progress((i + 1) / len(all_counties))
-                    soil = engine.get_county_baseline(county)
-                    if soil:
-                        res = {"county_data": soil, "weather_advice": "0mm"}
-                        matches = engine.match_crops_to_soil(res, lang="English")
-                        m = next((x for x in matches if x['crop'] == search_crop), None)
-                        if m: national_results.append({"County": county, "Score": m['match_score'], "pH": soil['pH'], "Texture": soil['Texture']})
-                
-                pbar.empty()
-                if national_results:
-                    national_results.sort(key=lambda x: x['Score'], reverse=True)
-                    st.write(f"### 🏆 Top 5 Locations for {search_crop}")
-                    st.table(pd.DataFrame(national_results[:5])[["County", "Score", "pH", "Texture"]])
-                    st.success(f"💎 Best Result: {national_results[0]['County']} ({national_results[0]['Score']}%)")
+            national_results = []
+            all_counties = engine.county_data['County'].unique()
+            pbar = st.progress(0)
+            for i, county in enumerate(all_counties):
+                pbar.progress((i + 1) / len(all_counties))
+                soil = engine.get_county_baseline(county)
+                if soil:
+                    res = {"county_data": soil, "weather_advice": "0mm"}
+                    matches = engine.match_crops_to_soil(res, lang="English")
+                    m = next((x for x in matches if x['crop'] == search_crop), None)
+                    if m: national_results.append({"County": county, "Score": m['match_score'], "pH": soil['pH'], "Texture": soil['Texture']})
+            
+            pbar.empty()
+            if national_results:
+                national_results.sort(key=lambda x: x['Score'], reverse=True)
+                st.write(f"### 🏆 Top 5 Locations for {search_crop}")
+                st.table(pd.DataFrame(national_results[:5])[["County", "Score", "pH", "Texture"]])
+                st.success(f"💎 Best Result: {national_results[0]['County']} ({national_results[0]['Score']}%)")
 
         st.divider()
         stats = get_stats()
