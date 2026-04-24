@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v46():
+def load_farmiq_engine_v47():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v46()
+engine = load_farmiq_engine_v47()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -640,14 +640,19 @@ with tab_yield:
 # Extension Dashboard
 if is_officer:
     with tab_officer:
-        st.error("🚀 SYSTEM VERSION 46 - INVESTOR MODE ACTIVE")
+        st.error("🚀 SYSTEM VERSION 47 - RADIO SCAN ACTIVE")
         st.title("📊 Dashboard")
         
-        # --- INVESTOR MODE: NATIONAL LAND FINDER (TOP PRIORITY) ---
-        with st.expander("🔍 Industrial Land Finder (Investor Mode)", expanded=True):
-            st.info("Locate the most scientifically suitable land in Kenya for industrial expansion.")
-            search_crop = st.selectbox("Select Crop:", ["Maize", "Tea", "Coffee (Arabica)", "Macadamia", "Avocado", "Rice (Upland)", "Cotton"], key="main_investor_crop")
-            if st.button("🚀 RUN NATIONAL SUITABILITY SCAN", use_container_width=True):
+        # --- INVESTOR MODE: NATIONAL LAND FINDER (STRIPPED DOWN) ---
+        st.write("### Industrial Land Finder")
+        search_crop = st.selectbox("Select Crop:", ["Maize", "Tea", "Coffee", "Macadamia", "Avocado", "Rice", "Cotton"])
+        
+        # Using a simple radio instead of a button
+        run_scan = st.radio("Start Analysis?", ["No", "Yes - Run National Scan"])
+        
+        if run_scan == "Yes - Run National Scan":
+            st.write(f"Analyzing all counties for {search_crop}...")
+            # Results logic
                 national_results = []
                 all_counties = engine.county_data['County'].unique()
                 pbar = st.progress(0)
