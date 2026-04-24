@@ -51,8 +51,8 @@ class FarmIQRecommender:
         if not self.PRICES["Subsidized"]:
             # Fallback
             self.PRICES = {
-                "Subsidized": {"DAP": 2500, "CAN": 2500, "NPK": 2500, "Urea": 2500, "Lime": 1500, "Mavuno": 2500},
-                "Commercial": {"DAP": 6500, "CAN": 4500, "NPK": 5500, "Urea": 5500, "Lime": 1800, "Mavuno": 5800}
+                "Subsidized": {"DAP": 2500, "CAN": 2500, "NPK": 2500, "Urea": 2500, "Lime": 1500, "Mavuno": 2500, "SSP": 2500, "NPK 17:17:17": 2500},
+                "Commercial": {"DAP": 6500, "CAN": 4500, "NPK": 5500, "Urea": 5500, "Lime": 1800, "Mavuno": 5800, "SSP": 5200, "NPK 17:17:17": 5600}
             }
     
     def detect_county(self, lat, lon):
@@ -192,39 +192,56 @@ class FarmIQRecommender:
         is_acidic = soil["pH"] < reqs["ph_min"]
         if soil["pH"] < 5.5:
             lime_bags = 2.0 * farm_size_acres
-            breakdown.append(f"{lime_bags:.1f} x bags Lime")
-            total_cost += lime_bags * mp["Lime"]
+            breakdown.append(f"Basal Adj: {lime_bags:.1f} x bags Lime")
+            total_cost += lime_bags * mp.get("Lime", 1800)
             if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {soil['pH']:.1f}. Apply Lime to unlock nutrients.")
             else: advice.append(f"🚨 **Asidi Kali**: pH {soil['pH']:.1f}. Tumia chokaa kurekebisha udongo.")
         else:
             if lang == "English": advice.append(f"✅ **pH**: Healthy ({soil['pH']:.1f}).")
             else: advice.append(f"✅ **pH**: Hali Sawa ({soil['pH']:.1f}).")
 
-        # 2. Phosphorus Gap (Planting)
+        # 2. Stage 1: Basal/Planting (Phosphorus & Potassium focus)
         p_val = soil["Extractable Phosphorus (mg/kg)"]
-        p_bags = 0
-        p_type = "DAP" if soil["pH"] >= 5.5 else "Mavuno" # Use specialized blends for acidic soils
+        k_val = soil["Extractable Potassium (mg/kg)"]
+        ph_val = soil["pH"]
         
-        if p_val < 10: p_bags = 1.5 # Severe deficit
-        elif p_val < 20: p_bags = 1.0 # Moderate
-        elif p_val < 30: p_bags = 0.5 # Low maintenance
+        # Dynamic Selection
+        if k_val < reqs["k_min"]:
+            p_type = "NPK 17:17:17"
+        elif ph_val < 5.5:
+            p_type = "SSP"
+        else:
+            p_type = "DAP"
+
+        p_gap = max(0, reqs["p_min"] - p_val)
+        p_bags = 0
+        if p_gap > 20: p_bags = 2.0
+        elif p_gap > 10: p_bags = 1.0
+        elif p_gap > 0: p_bags = 0.5
         
         if p_bags > 0:
             qty = p_bags * farm_size_acres
-            breakdown.append(f"{qty:.1f} x bags {p_type}")
+            breakdown.append(f"Stage 1 (Basal): {qty:.1f} x bags {p_type}")
             total_cost += qty * mp.get(p_type, 2500)
 
-        # 3. Nitrogen Gap (Top Dressing)
+        # 3. Stage 2: Top Dressing (Nitrogen focus)
         n_val = soil["Total Nitrogen (mg/kg)"]
         n_bags = 0
-        n_type = "CAN"
         
-        if n_val < 0.1: n_bags = 1.5
-        elif n_val < 0.2: n_bags = 1.0
+        # Dynamic Selection
+        if ph_val < 5.5:
+            n_type = "CAN"
+        else:
+            n_type = "Urea"
+            
+        n_gap = max(0, reqs["n_min"] - n_val)
+        if n_gap > 0.15: n_bags = 2.0
+        elif n_gap > 0.1: n_bags = 1.0
+        elif n_gap > 0: n_bags = 0.5
         
         if n_bags > 0:
             qty = n_bags * farm_size_acres
-            breakdown.append(f"{qty:.1f} x bags {n_type}")
+            breakdown.append(f"Stage 2 (Top Dress): {qty:.1f} x bags {n_type}")
             total_cost += qty * mp.get(n_type, 2500)
 
         health_score = self.calculate_health_score(soil, reqs)

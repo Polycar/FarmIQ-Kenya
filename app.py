@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v9():
+def load_farmiq_engine_v10():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v9()
+engine = load_farmiq_engine_v10()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -347,8 +347,17 @@ with tab_farmer:
                 for line in result['budget']['breakdown']:
                     if farm_acres < 0.5:
                         try:
-                            bags = float(line.split(" x ")[0])
-                            st.markdown(f"- **{bags*50:.1f}kg** {line.split(' bag ')[-1]}")
+                            import re
+                            # Match quantity like "1.0 x" anywhere in the string
+                            match = re.search(r"(\d+\.?\d*)\s*x", line)
+                            if match:
+                                bags = float(match.group(1))
+                                # Keep prefix (e.g. Stage 1) if present
+                                prefix = line.split(":")[0] + ": " if ":" in line else ""
+                                product = line.split(" bags ")[-1]
+                                st.markdown(f"- {prefix}**{bags*50:.1f}kg** {product}")
+                            else:
+                                st.markdown(f"- {line}")
                         except: st.markdown(f"- {line}")
                     else: st.markdown(f"- {line}")
 
