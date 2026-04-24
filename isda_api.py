@@ -14,15 +14,26 @@ _cached_token = None
 
 def _get_api_credentials():
     """Retrieve API credentials from Streamlit secrets or environment."""
+    username = None
+    password = None
     try:
         import streamlit as st
-        username = st.secrets.get("ISDA_USERNAME", os.environ.get("ISDA_USERNAME"))
-        password = st.secrets.get("ISDA_PASSWORD", os.environ.get("ISDA_PASSWORD"))
-        return username, password
+        # Try Streamlit secrets (dict-style access for compatibility)
+        if hasattr(st, 'secrets'):
+            try:
+                username = st.secrets["ISDA_USERNAME"]
+                password = st.secrets["ISDA_PASSWORD"]
+            except (KeyError, FileNotFoundError):
+                pass
     except Exception:
+        pass
+    
+    # Fallback to environment variables
+    if not username:
         username = os.environ.get("ISDA_USERNAME")
+    if not password:
         password = os.environ.get("ISDA_PASSWORD")
-        return username, password
+    return username, password
 
 def _get_auth_token():
     """Authenticate with iSDAsoil API and return JWT token (cached for 1 hour)."""
