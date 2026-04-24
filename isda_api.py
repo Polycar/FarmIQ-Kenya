@@ -1,52 +1,54 @@
 # iSDAsoil API Integration for FarmIQ Kenya
 # Provides 30m precision soil data for ALL nutrients (pH, N, P, K, OC)
-# Requires free registration at https://api.isda-africa.com
+# Registration: https://www.isda-africa.com/api/registration
 
 import requests
-import streamlit as st
 import os
 
 # API Configuration
-BASE_URL = "https://api.isda-africa.com/isdasoil/v2"
+LOGIN_URL = "https://api.isda-africa.com/login"
+SOIL_URL = "https://api.isda-africa.com/isdasoil/v2/soilproperty"
 
-# Soil properties we need for FarmIQ recommendations
-SOIL_PROPERTIES = [
-    "ph",
-    "nitrogen_total",
-    "phosphorous_extractable",
-    "potassium_extractable",
-    "carbon_organic"
-]
+# Cache token to avoid re-authenticating on every property query
+_cached_token = None
 
 def _get_api_credentials():
     """Retrieve API credentials from Streamlit secrets or environment."""
     try:
+        import streamlit as st
         username = st.secrets.get("ISDA_USERNAME", os.environ.get("ISDA_USERNAME"))
         password = st.secrets.get("ISDA_PASSWORD", os.environ.get("ISDA_PASSWORD"))
         return username, password
     except Exception:
-        return None, None
+        username = os.environ.get("ISDA_USERNAME")
+        password = os.environ.get("ISDA_PASSWORD")
+        return username, password
 
 def _get_auth_token():
-    """Authenticate with iSDAsoil API and return JWT token."""
+    """Authenticate with iSDAsoil API and return JWT token (cached for 1 hour)."""
+    global _cached_token
+    if _cached_token:
+        return _cached_token
+    
     username, password = _get_api_credentials()
     if not username or not password:
         return None
     
     try:
         response = requests.post(
-            f"{BASE_URL}/login",
-            json={"username": username, "password": password},
-            timeout=10
+            LOGIN_URL,
+            data={"username": username, "password": password},
+            timeout=15
         )
         response.raise_for_status()
         data = response.json()
-        return data.get("token") or data.get("access_token")
+        _cached_token = data.get("access_token")
+        return _cached_token
     except Exception:
         return None
 
-def fetch_soil_property(lat, lon, property_name, depth="0-20", token=None):
-    """Fetch a single soil property from the iSDAsoil API."""
+def _fetch_single_property(lat, lon, property_name, depth="0-20", token=None):
+    """Fetch a single soil property value from the iSDAsoil API."""
     if not token:
         return None
     
@@ -58,27 +60,14 @@ def fetch_soil_property(lat, lon, property_name, depth="0-20", token=None):
             "property": property_name,
             "depth": depth
         }
-        response = requests.get(
-            f"{BASE_URL}/soilproperty",
-            headers=headers,
-            params=params,
-            timeout=10
-        )
+        response = requests.get(SOIL_URL, headers=headers, params=params, timeout=15)
         response.raise_for_status()
         data = response.json()
         
-        # Extract the predicted mean value
-        if isinstance(data, dict):
-            # API returns property data with mean/uncertainty
-            for key, val in data.items():
-                if "mean" in str(key).lower() or "value" in str(key).lower():
-                    return float(val)
-            # Try direct numeric extraction from response
-            if property_name in data:
-                prop_data = data[property_name]
-                if isinstance(prop_data, dict):
-                    return float(prop_data.get("mean", prop_data.get("value", 0)))
-                return float(prop_data)
+        # Response structure: {"property": {"ph": [{"value": {"value": 5.7, "unit": ...}, ...}]}}
+        prop_data = data.get("property", {}).get(property_name, [])
+        if prop_data and len(prop_data) > 0:
+            return float(prop_data[0]["value"]["value"])
         return None
     except Exception:
         return None
@@ -88,28 +77,28 @@ def get_precision_soil_data(lat, lon):
     Fetch ALL soil properties at 30m precision for a given GPS coordinate.
     
     Returns a dict compatible with FarmIQ's soil data format, or None if API unavailable.
-    This is the main entry point used by recommender.py.
     
     Fallback chain:
-        1. iSDAsoil API (all nutrients at 30m) ← THIS FUNCTION
-        2. Local GeoTIFF (pH only at 30m)       ← existing get_high_res_ph()
-        3. County CSV averages                   ← existing get_county_data()
+        1. iSDAsoil API (all nutrients at 30m)  <-- THIS FUNCTION
+        2. Local GeoTIFF (pH only at 30m)        <-- existing get_high_res_ph()
+        3. County CSV averages                   <-- existing get_county_data()
     """
     token = _get_auth_token()
     if not token:
         return None
     
-    results = {}
+    # Map API property names to FarmIQ internal column names
     property_map = {
-        "ph": "pH",
-        "nitrogen_total": "Total Nitrogen (mg/kg)",
-        "phosphorous_extractable": "Extractable Phosphorus (mg/kg)",
-        "potassium_extractable": "Extractable Potassium (mg/kg)",
-        "carbon_organic": "Organic Carbon (g/kg)"
+        "ph":                       "pH",
+        "nitrogen_total":           "Total Nitrogen (mg/kg)",
+        "phosphorous_extractable":  "Extractable Phosphorus (mg/kg)",
+        "potassium_extractable":    "Extractable Potassium (mg/kg)",
+        "carbon_organic":           "Organic Carbon (g/kg)"
     }
     
+    results = {}
     for api_name, farmiq_name in property_map.items():
-        value = fetch_soil_property(lat, lon, api_name, token=token)
+        value = _fetch_single_property(lat, lon, api_name, token=token)
         if value is not None:
             results[farmiq_name] = value
     
