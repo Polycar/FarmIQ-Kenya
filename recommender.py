@@ -104,10 +104,11 @@ class FarmIQRecommender:
 
     def _get_isda_token(self):
         """Authenticate with iSDA API and return a JWT token."""
+        username, password = None, None
         try:
             import streamlit as st
-            username = st.secrets.get("ISDA_USERNAME")
-            password = st.secrets.get("ISDA_PASSWORD")
+            username = st.secrets["ISDA_USERNAME"]
+            password = st.secrets["ISDA_PASSWORD"]
         except Exception:
             username = os.environ.get("ISDA_USERNAME")
             password = os.environ.get("ISDA_PASSWORD")
@@ -421,9 +422,9 @@ class FarmIQRecommender:
             fert_n_analysis = ANALYSIS.get(n_type, {"N": 0.26})["N"]
             n_bags = (n_gap / (fert_n_analysis * 50)) if fert_n_analysis > 0 else 0
         
-        if n_bags > 0.1:
+        if n_bags > 0.01:
             qty = n_bags * farm_size_acres
-            breakdown.append(f"Stage 2 (Top Dress): {qty:.1f} x bags {n_type}")
+            breakdown.append(f"Stage 2 (Top Dress): {qty:.2f} x bags {n_type}")
             total_cost += qty * mp.get(n_type, 2500)
 
         # 6. Foliar Feed (Micronutrients for high-value crops)
