@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
-import rasterio
 import os
-from isda_api import get_precision_soil_data, is_api_configured
+import requests
+import datetime
 
 class FarmIQRecommender:
     def __init__(self, soil_data_path):
@@ -97,11 +97,48 @@ class FarmIQRecommender:
         return None
     
     def get_county_data(self, county_name):
-        """Retrieve soil metrics for a given county."""
         data = self.soil_data[self.soil_data["County"] == county_name]
         if data.empty:
             return None
         return data.iloc[0].to_dict()
+
+    def get_isda_nutrients(self, lat, lon):
+        """
+        Fetches real-time soil properties from iSDAsoil API
+        for a given GPS coordinate. Returns technical keys for explicit mapping.
+        """
+        properties = [
+            "nitrogen_total",
+            "phosphorus_extractable", 
+            "potassium_extractable",
+            "ph",
+            "organic_carbon"
+        ]
+        
+        base_url = "https://api.isda-africa.com/v1/soilproperty"
+        results = {}
+        
+        for prop in properties:
+            try:
+                response = requests.get(
+                    base_url,
+                    params={
+                        "lat": lat,
+                        "lon": lon,
+                        "property": prop,
+                        "depth": "0-20cm"
+                    },
+                    timeout=5
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    value = data.get("property", {}).get(prop, {}).get("value", {}).get("mean")
+                    if value is not None:
+                        results[prop] = float(value)
+            except Exception:
+                continue
+        
+        return results if results else None
 
     def calculate_health_score(self, soil, reqs):
         """Calculates a scientifically realistic soil quality index (SQI)."""
@@ -136,21 +173,26 @@ class FarmIQRecommender:
         data_source = "Regional Baseline (CSV)" if lang == "English" else "Msingi wa Eneo (CSV)"
         confidence = "Moderate 🟡 (Based on ~100+ historical regional samples)"
         
+        # TIER 1: iSDAsoil API — High Resolution Override
         if lat and lon:
-            # TIER 1: iSDAsoil API — All nutrients at 30m precision
-            if is_api_configured():
-                api_soil = get_precision_soil_data(lat, lon)
-                if api_soil:
-                    for key, val in api_soil.items():
-                        soil[key] = val
-                    if is_subcounty:
-                        data_source = "Sub-County Baseline (iSDAsoil API)" if lang == "English" else "Msingi wa Kaunti Ndogo (API)"
-                        confidence = "High 🟢 (30m satellite data averaged for Sub-County)"
-                    else:
-                        data_source = "iSDAsoil API (30m Full Spectrum)" if lang == "English" else "API ya iSDAsoil (30m Kamili)"
-                        confidence = "Very High 🟢 (All nutrients at 30m via iSDAsoil API)"
+            isda_data = self.get_isda_nutrients(lat, lon)
+            if isda_data:
+                # Explicit Bridge (API Keys -> Engine Keys)
+                if "ph" in isda_data:
+                    soil["pH"] = isda_data["ph"]
+                if "nitrogen_total" in isda_data:
+                    soil["Total Nitrogen (g/kg)"] = isda_data["nitrogen_total"]
+                if "phosphorus_extractable" in isda_data:
+                    soil["Extractable Phosphorus (mg/kg)"] = isda_data["phosphorus_extractable"]
+                if "potassium_extractable" in isda_data:
+                    soil["Extractable Potassium (mg/kg)"] = isda_data["potassium_extractable"]
+                if "organic_carbon" in isda_data:
+                    soil["Organic Carbon (g/kg)"] = isda_data["organic_carbon"]
+                
+                data_source = "iSDAsoil API (30m Full Spectrum)" if lang == "English" else "API ya iSDAsoil (30m Kamili)"
+                confidence = "Very High 🟢 (All nutrients at 30m via iSDAsoil API)"
             
-            # TIER 2: Local GeoTIFF — pH only at 30m (fallback if API not configured or failed)
+            # TIER 2: Local GeoTIFF — pH only at 30m (fallback if API failed)
             if "iSDAsoil" not in data_source:
                 hi_res_ph = self.get_high_res_ph(lat, lon)
                 if hi_res_ph:
