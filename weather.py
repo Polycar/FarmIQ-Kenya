@@ -51,6 +51,6 @@ def get_weather_context(lat, lon):
             return f"✅ Good conditions for fertilizer application this week ({total_rain:.1f}mm expected)."
             
     except requests.exceptions.RequestException as e:
-        return "⚠️ Could not fetch weather forecast at this time (API Error)."
+        return f"⚠️ Could not fetch weather forecast at this time (API Error: {str(e)})."
     except Exception as e:
-        return "⚠️ Error processing weather forecast."
+        return f"⚠️ Error processing weather forecast ({str(e)})."

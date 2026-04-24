@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v3():
+def load_farmiq_engine_v4():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v3()
+engine = load_farmiq_engine_v4()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -99,7 +99,7 @@ with tab_farmer:
     # --- PHASE 21: NATIONAL NEUTRALITY UI ---
     col_mode1, col_mode2 = st.columns(2)
     with col_mode1:
-        loc_mode = st.radio("Location Mode", ["GPS Precision (30m)", "County Average"], horizontal=True)
+        loc_mode = st.radio("Location Mode", ["GPS Precision (30m)", "Select Region (No GPS)"], horizontal=True)
     with col_mode2:
         lab_mode = st.toggle("🧪 Add My Soil Test Results (Optional)", help="Enable if you have a recent laboratory report.")
 
@@ -149,13 +149,39 @@ with tab_farmer:
                     selected_county = engine.detect_county(lat, lon)
                     st.caption(f"🌍 Detected: **{selected_county} County**")
     else:
+        # Load Sub-Counties
+        import pandas as pd
+        sc_path = os.path.join(BASE_DIR, "data", "subcounties.csv")
+        subcounty_df = pd.DataFrame()
+        if os.path.exists(sc_path):
+            subcounty_df = pd.read_csv(sc_path)
+
         county_list = sorted(engine.soil_data["County"].unique().tolist())
         selected_county = st.selectbox(t["county"], ["Select County..."] + county_list, index=0)
+        
+        selected_subcounty = None
+        if selected_county != "Select County...":
+            # Check if we have subcounties for this county
+            county_sc = subcounty_df[subcounty_df["County"] == selected_county] if not subcounty_df.empty else pd.DataFrame()
+            if not county_sc.empty:
+                sc_list = ["Whole County Average"] + sorted(county_sc["SubCounty"].tolist())
+                selected_subcounty = st.selectbox("Select Sub-County (API Precision)", sc_list)
+                
+                if selected_subcounty != "Whole County Average":
+                    # Extract coordinates for the API to hook into
+                    row = county_sc[county_sc["SubCounty"] == selected_subcounty].iloc[0]
+                    lat = float(row["Latitude"])
+                    lon = float(row["Longitude"])
+                    st.success(f"🎯 Sub-County API Locked: {selected_subcounty} ({lat}, {lon})")
+
         if selected_county == "Select County...":
             selected_county = None
             st.warning("📍 Select a county to proceed.")
         else:
-            insight = INSIGHTS.get(selected_county, "💡 **National Coverage**: Analyzing baseline soil chemistry for this zone.")
+            if selected_subcounty and selected_subcounty != "Whole County Average":
+                insight = f"💡 **Sub-County Precision Active**: Querying iSDAsoil API for {selected_subcounty}."
+            else:
+                insight = INSIGHTS.get(selected_county, "💡 **National Coverage**: Analyzing baseline soil chemistry for this zone.")
             st.info(insight)
 
     # Expert Lab Overrides
@@ -184,11 +210,15 @@ with tab_farmer:
         else:
             with st.spinner("Analyzing high-resolution data..."):
                 pm_key = "Subsidized" if price_basis == "Subsidized" else "Commercial"
+                is_sub = False
+                if loc_mode == "Select Region (No GPS)" and selected_subcounty and selected_subcounty != "Whole County Average":
+                    is_sub = True
+
                 st.session_state.result = engine.generate_recommendation(
                     selected_county, selected_crop, selected_fert, 
                     farm_size_acres=farm_acres, lang=lang_choice, 
                     lat=lat, lon=lon, overrides=overrides if lab_mode else None,
-                    price_mode=pm_key
+                    price_mode=pm_key, is_subcounty=is_sub
                 )
                 st.session_state.last_county = selected_county
                 st.session_state.saved_lat = lat

@@ -1,0 +1,88 @@
+County,SubCounty,Latitude,Longitude
+Kakamega,Lurambi,0.2833,34.7500
+Kakamega,Malava,0.4500,34.8667
+Kakamega,Navakholo,0.3833,34.6167
+Kakamega,Lugari,0.6167,34.8667
+Kakamega,Likuyani,0.7333,35.0333
+Kakamega,Mumias West,0.3333,34.4833
+Kakamega,Mumias East,0.3333,34.5667
+Kakamega,Matungu,0.4167,34.4500
+Kakamega,Butere,0.2000,34.4833
+Kakamega,Khwisero,0.1667,34.5500
+Kakamega,Shinyalu,0.2167,34.8000
+Kakamega,Ikolomani,0.1500,34.7333
+Uasin Gishu,Turbo,0.6333,35.0333
+Uasin Gishu,Soy,0.6833,35.1500
+Uasin Gishu,Moiben,0.7667,35.3833
+Uasin Gishu,Ainabkoi,0.3667,35.4500
+Uasin Gishu,Kapseret,0.4167,35.2167
+Uasin Gishu,Kesses,0.2833,35.3167
+Trans Nzoia,Kwanza,1.1333,35.0167
+Trans Nzoia,Endebess,1.0667,34.8500
+Trans Nzoia,Saboti,0.9667,34.8833
+Trans Nzoia,Kiminini,0.9167,34.9500
+Trans Nzoia,Cherangany,1.0667,35.1500
+Nakuru,Naivasha,-0.7167,36.4333
+Nakuru,Nakuru Town West,-0.3000,36.0500
+Nakuru,Nakuru Town East,-0.2833,36.0833
+Nakuru,Kuresoi South,-0.5500,35.6167
+Nakuru,Kuresoi North,-0.3167,35.6833
+Nakuru,Molo,-0.2500,35.7333
+Nakuru,Rongai,-0.1667,35.8667
+Nakuru,Subukia,-0.0333,36.2333
+Nakuru,Njoro,-0.3333,35.9500
+Nakuru,Gilgil,-0.5000,36.3167
+Nakuru,Bahati,-0.1667,36.1667
+Bungoma,Bumula,0.5167,34.4333
+Bungoma,Kanduyi,0.5667,34.5667
+Bungoma,Sirisia,0.7167,34.4500
+Bungoma,Kabuchai,0.6833,34.5500
+Bungoma,Mt. Elgon,0.8500,34.6167
+Bungoma,Kimilili,0.7833,34.7167
+Bungoma,Tongaren,0.8500,34.8833
+Bungoma,Webuye West,0.5833,34.7500
+Bungoma,Webuye East,0.6167,34.8000
+Nandi,Mosop,0.3667,35.0833
+Nandi,Emgwen,0.1833,35.1333
+Nandi,Aldai,0.0667,34.9833
+Nandi,Tinderet,0.0500,35.3167
+Nandi,Nandi Hills,0.1000,35.1667
+Nandi,Chesumei,0.2500,35.1167
+Kericho,Kipkelion East,-0.2167,35.5333
+Kericho,Kipkelion West,-0.1833,35.3833
+Kericho,Ainamoi,-0.3667,35.2833
+Kericho,Bureti,-0.5333,35.2000
+Kericho,Belgut,-0.4167,35.1667
+Kericho,Sigowet-Soin,-0.3333,35.0333
+Narok,Narok North,-1.0833,35.8667
+Narok,Narok South,-1.3333,35.7500
+Narok,Narok East,-1.0667,36.1667
+Narok,Narok West,-1.2000,35.4167
+Narok,Trans Mara West,-1.0333,34.8833
+Narok,Trans Mara East,-0.8833,35.0833
+Bomet,Sotik,-0.6833,35.1167
+Bomet,Chepalungu,-0.8333,35.2000
+Bomet,Bomet East,-0.7833,35.3500
+Bomet,Bomet Central,-0.7833,35.3333
+Bomet,Konoin,-0.6000,35.2667
+Kiambu,Gatundu South,-1.0333,36.8833
+Kiambu,Gatundu North,-0.9333,36.9000
+Kiambu,Juja,-1.1167,37.0167
+Kiambu,Thika Town,-1.0333,37.0833
+Kiambu,Ruiru,-1.1500,36.9667
+Kiambu,Githunguri,-1.0500,36.7833
+Kiambu,Kiambu,-1.1667,36.8333
+Kiambu,Kiambaa,-1.1833,36.7833
+Kiambu,Kabete,-1.2333,36.7167
+Kiambu,Kikuyu,-1.2500,36.6667
+Kiambu,Limuru,-1.1000,36.6333
+Kiambu,Lari,-0.9833,36.6333
+Meru,Igembe South,0.2500,37.9333
+Meru,Igembe Central,0.4167,37.9667
+Meru,Igembe North,0.5000,38.0833
+Meru,Tigania West,0.1167,37.7667
+Meru,Tigania East,0.1667,37.8333
+Meru,North Imenti,0.0500,37.6500
+Meru,Buuri,0.1000,37.5333
+Meru,Central Imenti,-0.0167,37.6000
+Meru,South Imenti,-0.0833,37.6167

@@ -98,11 +98,12 @@ class FarmIQRecommender:
         final_score = (s_ph * 0.4 + s_n * 0.15 + s_p * 0.15 + s_k * 0.15 + s_oc * 0.15) * 100
         return int(np.clip(final_score, 0, 100))
 
-    def generate_recommendation(self, county, crop, current_fert, farm_size_acres=1.0, lang="English", lat=None, lon=None, overrides=None, price_mode="Subsidized"):
-        """
-        Main recommendation engine. Merges spatial data with crop requirements 
-        to calculate a nutrient-gap based recommendation.
-        """
+    def generate_recommendation(self, county, crop, current_fert, farm_size_acres=1.0, lang="English", lat=None, lon=None, overrides=None, price_mode="Subsidized", is_subcounty=False):
+        """Generates localized advice with cost modeling and iSDAsoil fallback"""
+        # Ensure we have data for the county
+        if county not in self.soil_data["County"].values:
+            return {"error": f"County {county} not found in database."}
+        
         import datetime
         if lat and lon and (not county or county == "Detecting..."):
             county = self.detect_county(lat, lon)
@@ -124,8 +125,12 @@ class FarmIQRecommender:
                 if api_soil:
                     for key, val in api_soil.items():
                         soil[key] = val
-                    data_source = "iSDAsoil API (30m Full Spectrum)" if lang == "English" else "API ya iSDAsoil (30m Kamili)"
-                    confidence = "Very High 🟢 (All nutrients at 30m via iSDAsoil API)"
+                    if is_subcounty:
+                        data_source = "Sub-County Baseline (iSDAsoil API)" if lang == "English" else "Msingi wa Kaunti Ndogo (API)"
+                        confidence = "High 🟢 (30m satellite data averaged for Sub-County)"
+                    else:
+                        data_source = "iSDAsoil API (30m Full Spectrum)" if lang == "English" else "API ya iSDAsoil (30m Kamili)"
+                        confidence = "Very High 🟢 (All nutrients at 30m via iSDAsoil API)"
             
             # TIER 2: Local GeoTIFF — pH only at 30m (fallback if API not configured or failed)
             if "iSDAsoil" not in data_source:
