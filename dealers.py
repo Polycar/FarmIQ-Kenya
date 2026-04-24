@@ -19,6 +19,7 @@ def _load_dealers():
                 "town": row["town"],
                 "lat": float(row["lat"]) if "lat" in row else 0.0,
                 "lon": float(row["lon"]) if "lon" in row else 0.0,
+                "phone": str(row["phone"]) if "phone" in row else "",
                 "stocks": [s.strip() for s in str(row["stocks"]).split(",")]
             })
         return dealers

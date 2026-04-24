@@ -470,17 +470,22 @@ with tab_farmer:
                         # Providing a map link for them gives wrong directions, so we just list them.
                         st.markdown(f"**{d['name']}** (Available at {selected_county} County Depot)")
                     else:
-                        # Specific local dealers: Provide a precise pin on the map
+                        # Specific local dealers: Provide a precise pin on the map with Place Details
                         st.markdown(f"**{d['name']}** ({d['town']})")
                         dealer_lat, dealer_lon = d.get('lat', 0.0), d.get('lon', 0.0)
-                        if dealer_lat != 0.0:
-                            maps_url = f"https://www.google.com/maps/search/?api=1&query={dealer_lat},{dealer_lon}"
-                            st.markdown(f'<a href="{maps_url}" target="_blank" style="text-decoration: none;"><div style="background-color: #007bff; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 1rem;">📍 View Exact Location</div></a>', unsafe_allow_html=True)
-                        else:
-                            # Fallback to text search if no GPS
+                        dealer_phone = d.get('phone', '')
+                        
+                        col_d1, col_d2 = st.columns(2)
+                        with col_d1:
+                            # Rich Map Search: Name + Town to trigger the Business Card sidebar
                             search_query = f"{d['name']} {d['town']} Kenya"
                             maps_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(search_query)}"
-                            st.markdown(f'<a href="{maps_url}" target="_blank" style="text-decoration: none;"><div style="background-color: #007bff; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 1rem;">📍 Search on Map</div></a>', unsafe_allow_html=True)
+                            st.markdown(f'<a href="{maps_url}" target="_blank" style="text-decoration: none;"><div style="background-color: #007bff; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: 100%; margin-bottom: 1rem;">🗺️ View on Map</div></a>', unsafe_allow_html=True)
+                        with col_d2:
+                            if dealer_phone:
+                                clean_phone = dealer_phone.replace(" ", "")
+                                st.markdown(f'<a href="tel:{clean_phone}" style="text-decoration: none;"><div style="background-color: #16a34a; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: 100%; margin-bottom: 1rem;">📞 Call Dealer</div></a>', unsafe_allow_html=True)
+                        st.write("")
             
             # --- Action Buttons: WhatsApp & PDF & SMS ---
             st.write("")
