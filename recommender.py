@@ -406,8 +406,6 @@ class FarmIQRecommender:
             breakdown.append(f"Basal Adj: {lime_bags:.1f} x bags Lime")
             total_cost += lime_bags * mp.get("Lime", 0)
             
-            # Check for Aluminium Toxicity
-            al_val = soil.get("Aluminium (ppm)", 0)
             if al_val > 50:
                 if lang == "English": advice.append(f"🚨 **Aluminium Toxicity Detected**: Al is {al_val:.1f} ppm — actively poisoning roots. pH {ph_display} is too low. Apply {lime_bags:.1f} bags of Lime immediately.")
                 else: advice.append(f"🚨 **Sumu ya Alumini**: Al ni {al_val:.1f} ppm — inaharibu mizizi. pH {ph_display} iko chini. Tumia mifuko {lime_bags:.1f} ya chokaa mara moja.")
@@ -415,8 +413,11 @@ class FarmIQRecommender:
                 if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_display} is too low for {crop}. Apply {lime_bags:.1f} bags of Lime.")
                 else: advice.append(f"🚨 **Asidi Kali**: pH {ph_display} ni ya chini sana kwa {crop}. Tumia mifuko {lime_bags:.1f} ya chokaa.")
         else:
+            al_val = soil.get("Aluminium (ppm)", 0)
             status = "Healthy" if lang == "English" else "Hali Sawa"
-            advice.append(f"✅ **pH**: {status} ({ph_display}).")
+            al_status = "Safe" if al_val < 50 else "High"
+            if lang == "English": advice.append(f"✅ **pH & Aluminium**: pH is {status} ({ph_display}). Aluminium is {al_status} ({al_val:.1f} ppm).")
+            else: advice.append(f"✅ **pH na Alumini**: pH iko {status} ({ph_display}). Alumini iko Sawa ({al_val:.1f} ppm).")
 
         # 4. Stage 1: Basal Calculation (1 mg/kg gap = 1 kg/acre nutrient needed)
         p_val = soil["Extractable Phosphorus (mg/kg)"]
@@ -501,6 +502,16 @@ class FarmIQRecommender:
                 total_cost += qty * mp.get("Zinc Sulphate Foliar", 200)
                 if lang == "English": advice.append(f"⚠️ **Zinc Deficiency**: Zn is {zn_val:.1f} ppm (below {zn_min:.1f}). Apply Zinc Sulphate foliar spray at vegetative stage for 15–25% yield boost.")
                 else: advice.append(f"⚠️ **Upungufu wa Zinki**: Zn ni {zn_val:.1f} ppm (chini ya {zn_min:.1f}). Tumia dawa ya Zinki kupitia majani kwa ongezeko la mavuno.")
+            else:
+                if lang == "English": advice.append(f"✅ **Zinc**: Sufficient ({zn_val:.1f} ppm).")
+                else: advice.append(f"✅ **Zinki**: Inatosha ({zn_val:.1f} ppm).")
+
+        # 7b. Organic Carbon
+        oc_val = soil.get("Organic Carbon (g/kg)")
+        if oc_val is not None:
+            oc_status = "Good" if oc_val > 15 else "Low"
+            if lang == "English": advice.append(f"{'✅' if oc_status=='Good' else '⚠️'} **Organic Carbon**: {oc_status} ({oc_val:.1f} g/kg). {'Encourage composting.' if oc_status=='Low' else ''}")
+            else: advice.append(f"{'✅' if oc_status=='Good' else '⚠️'} **Kaboni Hai**: {oc_val:.1f} g/kg.")
 
         # 8. Texture Context
         texture = soil.get("Texture")
