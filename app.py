@@ -455,6 +455,10 @@ with tab_farmer:
                 current_lat = st.session_state.get('lat')
                 current_lon = st.session_state.get('lon')
                 
+                # Fallback to county center for directions if no farm precision coordinates exist
+                if not current_lat or current_lat == 0.0:
+                    current_lat, current_lon = get_county_coordinates(selected_county)
+                
                 # Dynamic GPS-based local search if coordinates exist
                 if current_lat and current_lon and current_lat != 0.0 and current_lon != 0.0:
                     gps_search = f"https://www.google.com/maps/search/Agrovet+Fertilizer/@{current_lat},{current_lon},14z"
