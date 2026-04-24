@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v44():
+def load_farmiq_engine_v45():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v44()
+engine = load_farmiq_engine_v45()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -661,15 +661,14 @@ if is_officer:
             
             # --- INVESTOR MODE: NATIONAL LAND FINDER ---
             st.markdown("---")
+            st.error("🚀 SYSTEM VERSION 45 - DEBUG ACTIVE")
             st.markdown("### 🔍 National Land Finder (Investor Mode)")
             
-            # Simple selectbox
             available_crops = ["Maize", "Beans", "Potatoes", "Coffee (Arabica)", "Tea", "Macadamia", "Avocado", "Sorghum"]
-            search_crop = st.selectbox("Pick a crop to find best land:", available_crops)
+            search_crop = st.selectbox("Pick a crop:", available_crops, key="sel_inv_45")
             
-            st.write("Checking system status... Ready to scan.")
-            
-            if st.button("🚀 START NATIONAL SCAN"):
+            if st.button("🚀 RUN NATIONAL SCAN NOW", key="btn_inv_45"):
+                st.write("Scan Initiated...")
                 national_results = []
                 all_counties = engine.county_data['County'].unique()
                 
