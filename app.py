@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v45():
+def load_farmiq_engine_v46():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v45()
+engine = load_farmiq_engine_v46()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -106,6 +106,29 @@ with st.sidebar:
     st.markdown("### 👨‍🌾 AI Agronomist Settings")
     ai_input = st.text_input("Gemini API Key", type="password", key="ai_input_sidebar")
     ai_key = ai_input or st.session_state.get("main_ai") or st.secrets.get("GEMINI_API_KEY")
+
+    # B2B Sidebar Tools
+    if is_officer:
+        st.sidebar.markdown("---")
+        st.sidebar.markdown("### 🏢 Investor Mode (V46)")
+        search_crop = st.sidebar.selectbox("Industrial Crop Search:", ["Maize", "Tea", "Coffee (Arabica)", "Macadamia", "Avocado", "Rice (Upland)", "Cotton"], key="side_crop")
+        if st.sidebar.checkbox("🚀 ACTIVATE NATIONAL SCAN"):
+            st.sidebar.info(f"Scanning Kenya for {search_crop}...")
+            national_results = []
+            all_counties = engine.county_data['County'].unique()
+            for county in all_counties:
+                soil = engine.get_county_baseline(county)
+                if soil:
+                    mock_res = {"county_data": soil, "weather_advice": "0mm"} 
+                    matches = engine.match_crops_to_soil(mock_res, lang="English")
+                    m = next((x for x in matches if x['crop'] == search_crop), None)
+                    if m: national_results.append({"County": county, "Score": m['match_score'], "pH": soil['pH']})
+            
+            if national_results:
+                national_results.sort(key=lambda x: x['Score'], reverse=True)
+                top = national_results[0]
+                st.sidebar.success(f"Best: {top['County']} ({top['Score']}%)")
+                st.sidebar.info(f"🔍 INVESTOR REPORT: {search_crop} flourishes best in {top['County']} due to a mean pH of {top['pH']:.1f}.")
 
 # Main Navigation
 if is_officer:
@@ -479,8 +502,6 @@ with tab_farmer:
                     st.info("Optimization engine is still loading data...")
 
             # Shared Components (Dealers)
-
-            # Shared Components (Dealers)
             dealers = get_dealers_by_county(selected_county)
             with st.expander(f"📍 {t['dealers_title']}"):
                 import urllib.parse
@@ -662,57 +683,6 @@ if is_officer:
             # --- INVESTOR MODE: NATIONAL LAND FINDER ---
             st.markdown("---")
             st.error("🚀 SYSTEM VERSION 45 - DEBUG ACTIVE")
-            st.markdown("### 🔍 National Land Finder (Investor Mode)")
-            
-            available_crops = ["Maize", "Beans", "Potatoes", "Coffee (Arabica)", "Tea", "Macadamia", "Avocado", "Sorghum"]
-            search_crop = st.selectbox("Pick a crop:", available_crops, key="sel_inv_45")
-            
-            if st.button("🚀 RUN NATIONAL SCAN NOW", key="btn_inv_45"):
-                st.write("Scan Initiated...")
-                national_results = []
-                all_counties = engine.county_data['County'].unique()
-                
-                my_bar = st.progress(0, text="Analyzing 47 counties...")
-                
-                for i, county in enumerate(all_counties):
-                    my_bar.progress((i + 1) / len(all_counties))
-                    soil = engine.get_county_baseline(county)
-                    if soil:
-                        mock_result = {"county_data": soil, "weather_advice": "0mm"} 
-                        matches = engine.match_crops_to_soil(mock_result, lang="English")
-                        crop_match = next((m for m in matches if m['crop'] == search_crop), None)
-                        if crop_match:
-                            national_results.append({
-                                "County": county,
-                                "Suitability": f"{crop_match['match_score']}%",
-                                "Score": crop_match['match_score'],
-                                "Label": crop_match['label'],
-                                "Avg pH": f"{soil['pH']:.1f}",
-                                "Texture": soil['Texture']
-                            })
-                
-                my_bar.empty()
-                if national_results:
-                    national_results.sort(key=lambda x: x['Score'], reverse=True)
-                    st.table(pd.DataFrame(national_results[:5])[["County", "Suitability", "Label", "Avg pH", "Texture"]])
-                    st.success(f"💎 Best location for {search_crop}: {national_results[0]['County']}")
-                
-                my_bar.empty()
-                if national_results:
-                    national_results.sort(key=lambda x: x['Score'], reverse=True)
-                    # Removing duplicates if any from the double-tap logic
-                    unique_res = []
-                    seen = set()
-                    for r in national_results:
-                        if r['County'] not in seen:
-                            unique_res.append(r)
-                            seen.add(r['County'])
-                    
-                    st.write(f"### 🏆 Top 5 Locations for {search_crop}")
-                    st.table(pd.DataFrame(unique_res[:5])[["County", "Suitability", "Label", "Avg pH", "Texture"]])
-                    st.success(f"💎 Best location for {search_crop}: {unique_res[0]['County']}")
-
-            st.markdown("---")
             st.markdown("### 💰 Market Pricing Management")
             st.write("Update current market prices and expected yields to keep farmer ROI estimates accurate.")
             
