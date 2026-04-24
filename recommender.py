@@ -24,6 +24,12 @@ class FarmIQRecommender:
             # Fallback if CSV is missing
             self.crop_reqs = {"Maize": {"ph_min": 5.5, "n_min": 1.2, "p_min": 20, "k_min": 150}}
         
+        # Load Crop Calendars
+        self.crop_calendars = pd.DataFrame()
+        cal_path = os.path.join(self.data_dir, 'crop_calendars.csv')
+        if os.path.exists(cal_path):
+            self.crop_calendars = pd.read_csv(cal_path)
+        
         self.raster_path = os.path.join(os.path.dirname(__file__), "data", "rasters", "kenya_ph.tif")
         
         # Load county centroids from CSV (editable without touching code)
@@ -156,14 +162,31 @@ class FarmIQRecommender:
 
         # Seasonal Context
         month = datetime.datetime.now().month
-        if lang == "English":
-            if 3 <= month <= 5: advice.append("🌧️ **Season**: Long Rains. Plan for early planting.")
-            elif 10 <= month <= 12: advice.append("🌧️ **Season**: Short Rains. Fast maturing recommended.")
-            else: advice.append("☀️ **Season**: Dry period. Land preparation phase.")
+        season_en = "Dry Season"
+        season_sw = "Kiangazi"
+        if 3 <= month <= 5: 
+            season_en = "Long Rains"
+            season_sw = "Mvua za masika"
+            advice.append("🌧️ **Season**: Long Rains. Plan for early planting." if lang == "English" else "🌧️ **Msimu**: Mvua za masika. Panda mapema.")
+        elif 10 <= month <= 12:
+            season_en = "Short Rains"
+            season_sw = "Mvua fupi"
+            advice.append("🌧️ **Season**: Short Rains. Fast maturing recommended." if lang == "English" else "🌧️ **Msimu**: Mvua fupi. Mbegu zinazokomaa haraka.")
         else:
-            if 3 <= month <= 5: advice.append("🌧️ **Msimu**: Mvua za masika. Panda mapema.")
-            elif 10 <= month <= 12: advice.append("🌧️ **Msimu**: Mvua fupi. Mbegu zinazokomaa haraka.")
-            else: advice.append("☀️ **Msimu**: Kiangazi. Tayarisha shamba sasa.")
+            advice.append("☀️ **Season**: Dry period. Land preparation phase." if lang == "English" else "☀️ **Msimu**: Kiangazi. Tayarisha shamba sasa.")
+
+        # Extract 3-Month Timeline from Crop Calendars CSV
+        timeline = None
+        if not self.crop_calendars.empty:
+            cal_match = self.crop_calendars[(self.crop_calendars["Crop"] == crop) & (self.crop_calendars["Season"] == season_en)]
+            if not cal_match.empty:
+                r = cal_match.iloc[0]
+                timeline = {
+                    "season": season_en if lang == "English" else season_sw,
+                    "month_1": r["Month_1"],
+                    "month_2": r["Month_2"],
+                    "month_3": r["Month_3"]
+                }
 
         # 1. Acidity & Liming
         is_acidic = soil["pH"] < reqs["ph_min"]

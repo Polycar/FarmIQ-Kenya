@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v4():
+def load_farmiq_engine_v5():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v4()
+engine = load_farmiq_engine_v5()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -295,12 +295,47 @@ with tab_farmer:
             st.markdown(f'<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;"><table style="width: 100%;"><tr><th>Feature</th><th>Your Habit ({comp.get("current", "")})</th><th style="color: #16a34a;">FarmIQ Recommendation</th></tr><tr><td>Strategy</td><td style="color: #ef4444; font-size:0.9rem;">{current_flaw}</td><td style="color: #16a34a; font-weight:bold;">{comp.get("recommended", "")}</td></tr><tr><td>Outcome</td><td>Variable Yield</td><td style="color: #16a34a; font-weight:bold;">{comp.get("impact", "")}</td></tr></table></div>', unsafe_allow_html=True)
 
             # Crop Calendar Timeline
-            st.markdown("### 📅 Application Calendar")
-            if result.get("timeline"):
-                for t_item in result["timeline"]:
-                    st.info(f"**{t_item['week']}**: {t_item['action']}")
+            st.markdown("### 📅 3-Month Action Plan")
+            timeline = result.get("timeline")
+            if timeline:
+                st.caption(f"Based on **{timeline['season']}** for **{result['crop']}**")
+                
+                # Visual Stepper UI
+                st.markdown("""
+                <style>
+                .step-box {
+                    background-color: #f8fafc;
+                    border-top: 4px solid #3b82f6;
+                    padding: 15px;
+                    border-radius: 5px;
+                    height: 100%;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                }
+                .step-number {
+                    font-size: 0.8rem;
+                    color: #64748b;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    font-weight: 700;
+                    margin-bottom: 5px;
+                }
+                .step-action {
+                    font-size: 0.95rem;
+                    color: #0f172a;
+                    font-weight: 600;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                t_col1, t_col2, t_col3 = st.columns(3)
+                with t_col1:
+                    st.markdown(f'<div class="step-box"><div class="step-number">Month 1</div><div class="step-action">{timeline["month_1"]}</div></div>', unsafe_allow_html=True)
+                with t_col2:
+                    st.markdown(f'<div class="step-box" style="border-color: #10b981;"><div class="step-number">Month 2</div><div class="step-action">{timeline["month_2"]}</div></div>', unsafe_allow_html=True)
+                with t_col3:
+                    st.markdown(f'<div class="step-box" style="border-color: #f59e0b;"><div class="step-number">Month 3</div><div class="step-action">{timeline["month_3"]}</div></div>', unsafe_allow_html=True)
             else:
-                st.success("Soil is optimally balanced. No major amendments required.")
+                st.info("Calendar data not currently available for this crop.")
 
             # Budget -> Shopping List
             st.markdown(f"### 🛒 Fertilizer Shopping List")
