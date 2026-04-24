@@ -20,11 +20,11 @@ class FarmIQRecommender:
                     "ph_min": row["ph_min"], "n_min": row["n_min"],
                     "p_min": row["p_min"], "k_min": row["k_min"],
                     "oc_min": row.get("oc_min", 15.0),
-                    "foliar": int(row.get("foliar", 0))
+                    "foliar": int(row.get("foliar", 0)),
+                    "zn_min": row.get("zn_min", 1.0)
                 }
         if not self.crop_reqs:
-            # Fallback if CSV is missing
-            self.crop_reqs = {"Maize": {"ph_min": 5.5, "n_min": 1.2, "p_min": 20, "k_min": 150, "oc_min": 15.0, "foliar": 0}}
+            self.crop_reqs = {"Maize": {"ph_min": 5.5, "n_min": 1.2, "p_min": 20, "k_min": 150, "oc_min": 15.0, "foliar": 0, "zn_min": 1.0}}
         
         # Load Crop Calendars
         self.crop_calendars = pd.DataFrame()
@@ -150,7 +150,10 @@ class FarmIQRecommender:
             "phosphorus_extractable",
             "potassium_extractable",
             "ph",
-            "organic_carbon"
+            "organic_carbon",
+            "aluminium_extractable",
+            "zinc_extractable",
+            "texture_class"
         ]
 
         base_url = "https://api.isda-africa.com/isdasoil/v2/soilproperty"
@@ -172,12 +175,19 @@ class FarmIQRecommender:
                 )
                 if response.status_code == 200:
                     data = response.json()
-                    # v2 structure: {"property": {"ph": [{"value": {"value": X}}]}}
                     prop_data = data.get("property", {}).get(prop, [])
                     if prop_data and len(prop_data) > 0:
                         value = prop_data[0].get("value", {}).get("value")
                         if value is not None:
-                            results[prop] = float(value)
+                            results[prop] = value if isinstance(value, str) else float(value)
+                        
+                        # Extract uncertainty (90% confidence)
+                        uncertainty = prop_data[0].get("uncertainty")
+                        if uncertainty and isinstance(uncertainty, list):
+                            for uc in uncertainty:
+                                if uc.get("confidence_interval") == "90%":
+                                    results[f"{prop}_lower"] = uc.get("lower_bound")
+                                    results[f"{prop}_upper"] = uc.get("upper_bound")
             except Exception:
                 continue
 
@@ -223,14 +233,22 @@ class FarmIQRecommender:
                 # Explicit Bridge (API Keys -> Engine Keys)
                 if "ph" in isda_data:
                     soil["pH"] = isda_data["ph"]
+                    soil["pH_bounds"] = (isda_data.get("ph_lower"), isda_data.get("ph_upper"))
                 if "nitrogen_total" in isda_data:
                     soil["Total Nitrogen (g/kg)"] = isda_data["nitrogen_total"]
+                    soil["N_bounds"] = (isda_data.get("nitrogen_total_lower"), isda_data.get("nitrogen_total_upper"))
                 if "phosphorus_extractable" in isda_data:
                     soil["Extractable Phosphorus (mg/kg)"] = isda_data["phosphorus_extractable"]
                 if "potassium_extractable" in isda_data:
                     soil["Extractable Potassium (mg/kg)"] = isda_data["potassium_extractable"]
                 if "organic_carbon" in isda_data:
                     soil["Organic Carbon (g/kg)"] = isda_data["organic_carbon"]
+                if "aluminium_extractable" in isda_data:
+                    soil["Aluminium (ppm)"] = isda_data["aluminium_extractable"]
+                if "zinc_extractable" in isda_data:
+                    soil["Zinc (ppm)"] = isda_data["zinc_extractable"]
+                if "texture_class" in isda_data:
+                    soil["Texture"] = isda_data["texture_class"]
                 
                 data_source = "iSDAsoil API (30m Full Spectrum)" if lang == "English" else "API ya iSDAsoil (30m Kamili)"
                 confidence = "Very High 🟢 (All nutrients at 30m via iSDAsoil API)"
@@ -367,17 +385,30 @@ class FarmIQRecommender:
 
         # 3. Acidity & Liming (Scientific: Only if below crop-specific ph_min)
         is_acidic = soil["pH"] < reqs["ph_min"]
+        
+        # Format pH display with uncertainty if available
+        ph_display = f"{ph_val:.1f}"
+        if "pH_bounds" in soil and soil["pH_bounds"][0] is not None:
+            ph_display += f" (90% Confidence Range: {soil['pH_bounds'][0]:.1f}-{soil['pH_bounds'][1]:.1f})"
+
         if is_acidic:
             # Formula: Gap * 10 bags/acre
             gap = reqs["ph_min"] - ph_val
             lime_bags = gap * 10 * farm_size_acres
             breakdown.append(f"Basal Adj: {lime_bags:.1f} x bags Lime")
             total_cost += lime_bags * mp.get("Lime", 0)
-            if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_val:.1f} is too low for {crop}. Apply {lime_bags:.1f} bags of Lime.")
-            else: advice.append(f"🚨 **Asidi Kali**: pH {ph_val:.1f} ni ya chini sana kwa {crop}. Tumia mifuko {lime_bags:.1f} ya chokaa.")
+            
+            # Check for Aluminium Toxicity
+            al_val = soil.get("Aluminium (ppm)", 0)
+            if al_val > 50:
+                if lang == "English": advice.append(f"🚨 **Aluminium Toxicity Detected**: Al is {al_val:.1f} ppm — actively poisoning roots. pH {ph_display} is too low. Apply {lime_bags:.1f} bags of Lime immediately.")
+                else: advice.append(f"🚨 **Sumu ya Alumini**: Al ni {al_val:.1f} ppm — inaharibu mizizi. pH {ph_display} iko chini. Tumia mifuko {lime_bags:.1f} ya chokaa mara moja.")
+            else:
+                if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_display} is too low for {crop}. Apply {lime_bags:.1f} bags of Lime.")
+                else: advice.append(f"🚨 **Asidi Kali**: pH {ph_display} ni ya chini sana kwa {crop}. Tumia mifuko {lime_bags:.1f} ya chokaa.")
         else:
             status = "Healthy" if lang == "English" else "Hali Sawa"
-            advice.append(f"✅ **pH**: {status} ({ph_val:.1f}).")
+            advice.append(f"✅ **pH**: {status} ({ph_display}).")
 
         # 4. Stage 1: Basal Calculation (1 mg/kg gap = 1 kg/acre nutrient needed)
         p_val = soil["Extractable Phosphorus (mg/kg)"]
@@ -399,6 +430,10 @@ class FarmIQRecommender:
 
         # 5. Stage 2: Top Dressing Calculation
         n_val = soil["Total Nitrogen (g/kg)"]
+        n_display = f"{n_val:.2f} g/kg"
+        if "N_bounds" in soil and soil["N_bounds"][0] is not None:
+            n_display += f" (90% Confidence Range: {soil['N_bounds'][0]:.2f}-{soil['N_bounds'][1]:.2f})"
+        
         n_bags = 0
         
         # Check Top Dressing Rules
@@ -423,7 +458,7 @@ class FarmIQRecommender:
                         advice.append(f"🚀 **Hatua ya 2 (Kukuzia)**: Tumia mifuko {qty:.1f} za {n_type} wakati wa **{rule['Timing']}**. {rule['Instruction']}")
                 else:
                     n_bags = 0
-                    if lang == "English": advice.append(f"✅ **Nitrogen**: Sufficient ({n_val:.2f} g/kg). No top dress required.")
+                    if lang == "English": advice.append(f"✅ **Nitrogen**: Sufficient ({n_display}). No top dress required.")
                     else: advice.append(f"✅ **Nitrojeni**: Inatosha ({n_val:.2f} g/kg). Hakuna mbolea ya kukuzia inayohitajika.")
         else:
             # Fallback
@@ -437,7 +472,7 @@ class FarmIQRecommender:
             total_cost += qty * mp.get(n_type, 0)
         elif td_rule.empty:
             n_bags = 0
-            if lang == "English": advice.append(f"✅ **Nitrogen**: Sufficient ({n_val:.2f} g/kg). No top dress required.")
+            if lang == "English": advice.append(f"✅ **Nitrogen**: Sufficient ({n_display}). No top dress required.")
             else: advice.append(f"✅ **Nitrojeni**: Inatosha ({n_val:.2f} g/kg). Hakuna mbolea ya kukuzia inayohitajika.")
 
         # 6. Foliar Feed (Data-driven from crop_requirements.csv)
@@ -447,6 +482,31 @@ class FarmIQRecommender:
             total_cost += foliar_qty * mp.get("Foliar Feed (1L)", 0)
             if lang == "English": advice.append(f"🍃 **Foliar Tip**: Apply Foliar Feed during flowering/fruiting for maximum quality.")
             else: advice.append(f"🍃 **Kidokezo**: Tumia mbolea ya majani wakati wa kutoa maua/matunda.")
+
+        # 7. Zinc Deficiency
+        zn_val = soil.get("Zinc (ppm)")
+        if zn_val is not None:
+            zn_min = reqs.get("zn_min", 1.0)
+            if zn_val < zn_min:
+                qty = 1.0 * farm_size_acres
+                breakdown.append(f"Zinc Supplement: {qty:.1f} x Acre Doses Zinc Sulphate Foliar")
+                total_cost += qty * mp.get("Zinc Sulphate Foliar", 200)
+                if lang == "English": advice.append(f"⚠️ **Zinc Deficiency**: Zn is {zn_val:.1f} ppm (below {zn_min:.1f}). Apply Zinc Sulphate foliar spray at vegetative stage for 15–25% yield boost.")
+                else: advice.append(f"⚠️ **Upungufu wa Zinki**: Zn ni {zn_val:.1f} ppm (chini ya {zn_min:.1f}). Tumia dawa ya Zinki kupitia majani kwa ongezeko la mavuno.")
+
+        # 8. Texture Context
+        texture = soil.get("Texture")
+        if texture:
+            tex_advice = f"Your soil texture is {texture}."
+            if "Sand" in texture:
+                tex_advice += " It drains quickly. Use split, lighter fertilizer applications to prevent leaching."
+            elif "Clay" in texture:
+                tex_advice += " It holds nutrients well but may drain poorly. Ensure good field drainage."
+            elif "Loam" in texture:
+                tex_advice += " Excellent texture with balanced drainage and nutrient retention."
+            
+            if lang == "English": advice.append(f"🏔️ **Soil Texture**: {tex_advice}")
+            else: advice.append(f"🏔️ **Umbile la Udongo**: Aina ya udongo wako ni {texture}.")
 
         health_score = self.calculate_health_score(soil, reqs)
             
