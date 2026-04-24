@@ -217,12 +217,15 @@ class FarmIQRecommender:
             cal_match = self.crop_calendars[(self.crop_calendars["Crop"] == crop) & (self.crop_calendars["Season"] == season_en)]
             if not cal_match.empty:
                 r = cal_match.iloc[0]
-                m1 = str(r["Month_1"]).replace("(DAP/NPK)", f"({p_type})")
-                m3 = str(r["Month_3"]).replace("(CAN/Urea)", f"({n_type})")
+                # Dynamically inject the recommended brands into any month that has a placeholder
+                m1 = str(r["Month_1"]).replace("(DAP/NPK)", f"({p_type})").replace("(CAN/Urea)", f"({n_type})")
+                m2 = str(r["Month_2"]).replace("(DAP/NPK)", f"({p_type})").replace("(CAN/Urea)", f"({n_type})")
+                m3 = str(r["Month_3"]).replace("(DAP/NPK)", f"({p_type})").replace("(CAN/Urea)", f"({n_type})")
+                
                 timeline = {
                     "season": season_en if lang == "English" else season_sw,
                     "month_1": m1,
-                    "month_2": r["Month_2"],
+                    "month_2": m2,
                     "month_3": m3
                 }
 
