@@ -8,7 +8,7 @@ from report_gen import generate_report_pdf
 from dealers import get_dealers_by_county
 from database import save_recommendation, get_all_records, get_stats
 from streamlit_geolocation import streamlit_geolocation
-from weather import get_weather_context
+from weather import get_weather_context, get_county_coordinates
 
 # Set page config for mobile-friendly responsive layout
 st.set_page_config(
@@ -283,17 +283,23 @@ with tab_farmer:
             # Weather Context
             saved_lat = st.session_state.get('saved_lat')
             saved_lon = st.session_state.get('saved_lon')
-            if saved_lat is not None and saved_lon is not None and saved_lat != 0.0 and saved_lon != 0.0:
-                with st.spinner("Fetching 7-day weather forecast..."):
-                    weather_advice = get_weather_context(saved_lat, saved_lon)
-                if weather_advice:
-                    st.markdown("### ⛅ 7-Day Weather Context")
-                    if "✅" in weather_advice:
-                        st.success(weather_advice, icon="✅")
-                    elif "🌧️" in weather_advice:
-                        st.error(weather_advice, icon="🌧️")
-                    else:
-                        st.warning(weather_advice, icon="⚠️")
+            
+            # If no GPS provided, fallback to the county's central coordinates
+            if not saved_lat or not saved_lon or saved_lat == 0.0 or saved_lon == 0.0:
+                weather_lat, weather_lon = get_county_coordinates(selected_county)
+            else:
+                weather_lat, weather_lon = saved_lat, saved_lon
+                
+            with st.spinner("Fetching 7-day weather forecast..."):
+                weather_advice = get_weather_context(weather_lat, weather_lon)
+            if weather_advice:
+                st.markdown("### ⛅ 7-Day Weather Context")
+                if "✅" in weather_advice:
+                    st.success(weather_advice, icon="✅")
+                elif "🌧️" in weather_advice:
+                    st.error(weather_advice, icon="🌧️")
+                else:
+                    st.warning(weather_advice, icon="⚠️")
 
 
             # Shared Components (Dealers)
