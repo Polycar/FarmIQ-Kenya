@@ -115,7 +115,9 @@ with tab_farmer:
     with col_mode2:
         lab_mode = st.toggle("🧪 Add My Soil Test Results (Optional)", help="Enable if you have a recent laboratory report.")
 
-    lat, lon, selected_county = None, None, None
+    lat = st.session_state.get("lat")
+    lon = st.session_state.get("lon")
+    selected_county = None
 
     # Dynamic Insights Collection
     INSIGHTS = {
@@ -143,8 +145,12 @@ with tab_farmer:
             """, unsafe_allow_html=True)
         
         if location and location.get("latitude"):
-            lat = round(location["latitude"], 4)
-            lon = round(location["longitude"], 4)
+            st.session_state.lat = round(location["latitude"], 4)
+            st.session_state.lon = round(location["longitude"], 4)
+        
+        if st.session_state.get("lat"):
+            lat = st.session_state.lat
+            lon = st.session_state.lon
             st.success(f"✅ GPS Signal Locked: {lat}, {lon}")
             selected_county = engine.detect_county(lat, lon)
             st.caption(f"🌍 Detected: **{selected_county} County**")
