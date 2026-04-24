@@ -211,23 +211,45 @@ class FarmIQRecommender:
         
         n_type = "CAN" if ph_val < 5.5 else "Urea"
 
-        # 2. Extract 3-Month Timeline from Crop Calendars CSV
-        timeline = None
-        if not self.crop_calendars.empty:
-            cal_match = self.crop_calendars[(self.crop_calendars["Crop"] == crop) & (self.crop_calendars["Season"] == season_en)]
-            if not cal_match.empty:
-                r = cal_match.iloc[0]
-                # Dynamically inject the recommended brands into any month that has a placeholder
-                m1 = str(r["Month_1"]).replace("(DAP/NPK)", f"({p_type})").replace("(CAN/Urea)", f"({n_type})")
-                m2 = str(r["Month_2"]).replace("(DAP/NPK)", f"({p_type})").replace("(CAN/Urea)", f"({n_type})")
-                m3 = str(r["Month_3"]).replace("(DAP/NPK)", f"({p_type})").replace("(CAN/Urea)", f"({n_type})")
-                
-                timeline = {
-                    "season": season_en if lang == "English" else season_sw,
-                    "month_1": m1,
-                    "month_2": m2,
-                    "month_3": m3
-                }
+        # --- Dynamic Biological Action Plan (Timeline) ---
+        # Instead of static, we build this based on the crop's growth rate (Weeks)
+        timeline = {
+            "season": season_en if lang == "English" else season_sw,
+            "month_1": f"Land Prep, Sowing & Basal Fertilizer ({p_type})",
+            "month_2": "1st Weeding & Growth Monitoring",
+            "month_3": "Scouting & Crop Protection"
+        }
+        
+        if lang == "Kiswahili":
+            timeline["month_1"] = f"Tayarisha Shamba, Panda na Mbolea ya Kupandia ({p_type})"
+            timeline["month_2"] = "Palizi ya kwanza na Kuangalia Ukuaji"
+            timeline["month_3"] = "Kuangalia Wadudu na Kulinda Mazao"
+
+        # Cross-reference the Top Dressing Rules (Biological Timing)
+        td_rule = self.top_dress_rules[self.top_dress_rules["Crop"] == crop] if not self.top_dress_rules.empty else pd.DataFrame()
+        if not td_rule.empty:
+            rule = td_rule.iloc[0]
+            timing = str(rule["Timing"]).lower()
+            product = str(rule["Product"])
+            
+            # Month 1 (Weeks 1-4)
+            if any(x in timing for x in ["week 3", "week 4", "emergence", "planting"]):
+                if product != "None":
+                    timeline["month_1"] += f" + Top Dressing ({n_type})"
+                else:
+                    timeline["month_1"] += " (No N-Top Dress needed)"
+
+            # Month 2 (Weeks 5-8)
+            if any(x in timing for x in ["week 5", "week 6", "week 7", "week 8", "knee-high", "tillering"]):
+                if product != "None":
+                    timeline["month_2"] = f"Top Dressing ({n_type}) & Weeding" if lang == "English" else f"Mbolea ya Kukuzia ({n_type}) na Palizi"
+                else:
+                    timeline["month_2"] += " (No N-Top Dress needed)"
+
+            # Month 3 (Weeks 9-12+)
+            if any(x in timing for x in ["week 9", "week 10", "week 11", "week 12", "fruiting", "continuous"]):
+                if product != "None":
+                    timeline["month_3"] = f"Late Stage Top Dressing ({n_type}) & Protection" if lang == "English" else f"Mbolea ya Kukuzia na Ulinzi wa Mazao"
 
         # 3. Acidity & Liming (Scientific: ~10 bags per 1.0 pH gap for correction)
         is_acidic = soil["pH"] < reqs["ph_min"]
