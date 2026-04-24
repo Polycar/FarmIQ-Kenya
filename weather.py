@@ -34,21 +34,57 @@ def get_weather_context(lat, lon):
         response.raise_for_status()
         data = response.json()
         
-        daily_precipitation = data.get("daily", {}).get("precipitation_sum", [])
-        # Filter out None values in case of missing data
-        valid_precipitation = [p for p in daily_precipitation if p is not None]
+        daily = data.get("daily", {})
+        precip_list = daily.get("precipitation_sum", [])
+        time_list = daily.get("time", [])
         
-        if not valid_precipitation:
+        if not precip_list or not time_list:
             return "⚠️ Weather forecast data is currently unavailable."
             
-        total_rain = sum(valid_precipitation)
+        total_rain = sum([p for p in precip_list if p is not None])
         
-        if total_rain < 5:
-            return f"⚠️ Dry week ahead ({total_rain:.1f}mm expected) — delay top dressing until after rain."
-        elif total_rain > 50:
-            return f"🌧️ Heavy rain expected ({total_rain:.1f}mm expected) — hold off on fertilizer application to avoid runoff."
+        # Scenario 1: Heavy Rain (Risk of Runoff)
+        if total_rain > 50:
+            # Find the first clear day (< 2mm rain) in the API forecast
+            clear_day = None
+            for t, p in zip(time_list, precip_list):
+                if p is not None and p < 2.0:
+                    clear_day = t
+                    break
+            
+            if clear_day:
+                # Format the date nicely
+                try:
+                    date_obj = pd.to_datetime(clear_day)
+                    date_str = date_obj.strftime('%A, %b %d')
+                except:
+                    date_str = clear_day
+                return f"🌧️ **Heavy rain expected** ({total_rain:.1f}mm) — hold off on fertilizer to avoid runoff. **Safe window opens on {date_str}**."
+            else:
+                return f"🌧️ **Heavy rain expected** ({total_rain:.1f}mm) — runoff risk is high for the next 7 days. Hold off application."
+
+        # Scenario 2: Too Dry (Top dressing needs moisture to dissolve)
+        elif total_rain < 5:
+            # Look for the first rain day (> 2mm) to advise application
+            rain_day = None
+            for t, p in zip(time_list, precip_list):
+                if p is not None and p >= 2.0:
+                    rain_day = t
+                    break
+            
+            if rain_day:
+                try:
+                    date_obj = pd.to_datetime(rain_day)
+                    date_str = date_obj.strftime('%A, %b %d')
+                except:
+                    date_str = rain_day
+                return f"⚠️ **Dry week ahead** ({total_rain:.1f}mm) — fertilizer may not dissolve. **Apply on {date_str}** when light rain is predicted."
+            else:
+                return f"⚠️ **Very dry week** ({total_rain:.1f}mm) — avoid top dressing as fertilizer will not dissolve. Wait for rain."
+
+        # Scenario 3: Optimal
         else:
-            return f"✅ Good conditions for fertilizer application this week ({total_rain:.1f}mm expected)."
+            return f"✅ **Optimal conditions** ({total_rain:.1f}mm expected). Good moisture for fertilizer absorption this week."
             
     except requests.exceptions.RequestException as e:
         return f"⚠️ Could not fetch weather forecast at this time (API Error: {str(e)})."
