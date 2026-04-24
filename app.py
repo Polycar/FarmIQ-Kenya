@@ -461,21 +461,21 @@ with tab_farmer:
                 if hasattr(engine, 'match_crops_to_soil'):
                     matches = engine.match_crops_to_soil(result, farm_acres=farm_acres, lang=lang_choice)
                     if matches:
-                    st.write("Based on your soil's pH and nutrient levels, here are the crops with the highest success probability:")
-                    for m in matches:
-                        col_m1, col_m2 = st.columns([2, 1])
-                        with col_m1:
-                            st.markdown(f"**{m['crop']}**")
-                            # Color bar for match score
-                            color = "#16a34a" if m['match_score'] >= 85 else "#eab308" if m['match_score'] >= 70 else "#f97316"
-                            st.markdown(f"""
-                            <div style="background-color: #e2e8f0; border-radius: 10px; width: 100%; height: 8px; margin: 5px 0;">
-                                <div style="background-color: {color}; width: {m['match_score']}%; height: 100%; border-radius: 10px;"></div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            st.caption(f"{m['label']} ({m['match_score']}% Match)")
-                        with col_m2:
-                            st.metric("Est. Gross", f"KES {m['gross_income']:,}")
+                        st.write("Based on your soil's pH and nutrient levels, here are the crops with the highest success probability:")
+                        for m in matches:
+                            col_m1, col_m2 = st.columns([2, 1])
+                            with col_m1:
+                                st.markdown(f"**{m['crop']}**")
+                                # Color bar for match score
+                                color = "#16a34a" if m['match_score'] >= 85 else "#eab308" if m['match_score'] >= 70 else "#f97316"
+                                st.markdown(f"""
+                                <div style="background-color: #e2e8f0; border-radius: 10px; width: 100%; height: 8px; margin: 5px 0;">
+                                    <div style="background-color: {color}; width: {m['match_score']}%; height: 100%; border-radius: 10px;"></div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                st.caption(f"{m['label']} ({m['match_score']}% Match)")
+                            with col_m2:
+                                st.metric("Est. Gross", f"KES {m['gross_income']:,}")
                 else:
                     st.info("Optimization engine is still loading data...")
 
