@@ -174,7 +174,9 @@ class FarmIQRecommender:
             "NPK 17:17:17": {"N": 0.17, "P": 0.17, "K": 0.17},
             "Mavuno": {"N": 0.10, "P": 0.26, "K": 0.10},
             "SSP": {"N": 0.0, "P": 0.20, "K": 0.0},
-            "YaraMila Cereal": {"N": 0.23, "P": 0.23, "K": 0.0}
+            "YaraMila Cereal": {"N": 0.23, "P": 0.23, "K": 0.0},
+            "NPK 26:5:5": {"N": 0.26, "P": 0.05, "K": 0.05},
+            "SA": {"N": 0.21, "P": 0.0, "K": 0.0}
         }
 
         # --- SCIENTIFIC LOGIC: NUTRIENT GAP CALCULATION ---
@@ -202,28 +204,44 @@ class FarmIQRecommender:
         # 1. Base Strategy (calculated early for action plan)
         ph_val = soil["pH"]
         k_val = soil["Extractable Potassium (mg/kg)"]
-        if k_val < reqs["k_min"]:
+        
+        if crop == "Tea":
+            p_type = "NPK 26:5:5"
+            n_type = "SA"
+        elif k_val < reqs["k_min"]:
             p_type = "NPK 17:17:17"
         elif ph_val < 5.5:
             p_type = "Mavuno" if crop in ["Maize", "Sorghum", "Wheat"] else "SSP"
         else:
             p_type = "DAP"
         
-        n_type = "CAN" if ph_val < 5.5 else "Urea"
+        if crop != "Tea":
+            n_type = "CAN" if ph_val < 5.5 else "Urea"
 
         # --- Dynamic Biological Action Plan (Timeline) ---
         # Instead of static, we build this based on the crop's growth rate (Weeks)
-        timeline = {
-            "season": season_en if lang == "English" else season_sw,
-            "month_1": f"Land Prep, Sowing & Basal Fertilizer ({p_type})",
-            "month_2": "1st Weeding & Growth Monitoring",
-            "month_3": "Scouting & Crop Protection"
-        }
-        
-        if lang == "Kiswahili":
-            timeline["month_1"] = f"Tayarisha Shamba, Panda na Mbolea ya Kupandia ({p_type})"
-            timeline["month_2"] = "Palizi ya kwanza na Kuangalia Ukuaji"
-            timeline["month_3"] = "Kuangalia Wadudu na Kulinda Mazao"
+        if crop == "Tea":
+            timeline = {
+                "season": season_en if lang == "English" else season_sw,
+                "month_1": f"Pruning & General Maintenance",
+                "month_2": f"First Feeding ({p_type})",
+                "month_3": f"Plucking Cycle & Late Feeding ({n_type})"
+            }
+            if lang == "Kiswahili":
+                timeline["month_1"] = "Kupogoa na Matengenezo ya Jumla"
+                timeline["month_2"] = f"Kulisha kwa Kwanza ({p_type})"
+                timeline["month_3"] = f"Mzunguko wa Kuchuma na Kulisha kwa Pili ({n_type})"
+        else:
+            timeline = {
+                "season": season_en if lang == "English" else season_sw,
+                "month_1": f"Land Prep, Sowing & Basal Fertilizer ({p_type})",
+                "month_2": "1st Weeding & Growth Monitoring",
+                "month_3": "Scouting & Crop Protection"
+            }
+            if lang == "Kiswahili":
+                timeline["month_1"] = f"Tayarisha Shamba, Panda na Mbolea ya Kupandia ({p_type})"
+                timeline["month_2"] = "Palizi ya kwanza na Kuangalia Ukuaji"
+                timeline["month_3"] = "Kuangalia Wadudu na Kulinda Mazao"
 
         # Cross-reference the Top Dressing Rules (Biological Timing)
         td_rule = self.top_dress_rules[self.top_dress_rules["Crop"] == crop] if not self.top_dress_rules.empty else pd.DataFrame()
@@ -251,18 +269,19 @@ class FarmIQRecommender:
                 if product != "None":
                     timeline["month_3"] = f"Late Stage Top Dressing ({n_type}) & Protection" if lang == "English" else f"Mbolea ya Kukuzia na Ulinzi wa Mazao"
 
-        # 3. Acidity & Liming (Scientific: ~10 bags per 1.0 pH gap for correction)
+        # 3. Acidity & Liming (Scientific: Only if below crop-specific ph_min)
         is_acidic = soil["pH"] < reqs["ph_min"]
-        if ph_val < 5.5:
+        if is_acidic:
             # Formula: Gap * 10 bags/acre
-            lime_bags = max(1.0, (5.5 - ph_val) * 10) * farm_size_acres
+            gap = reqs["ph_min"] - ph_val
+            lime_bags = max(1.0, gap * 10) * farm_size_acres
             breakdown.append(f"Basal Adj: {lime_bags:.1f} x bags Lime")
             total_cost += lime_bags * mp.get("Lime", 1800)
-            if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_val:.1f}. Apply {lime_bags:.1f} bags of Lime to unlock nutrients.")
-            else: advice.append(f"🚨 **Asidi Kali**: pH {ph_val:.1f}. Tumia mifuko {lime_bags:.1f} ya chokaa kurekebisha udongo.")
+            if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_val:.1f} is too low for {crop}. Apply {lime_bags:.1f} bags of Lime.")
+            else: advice.append(f"🚨 **Asidi Kali**: pH {ph_val:.1f} ni ya chini sana kwa {crop}. Tumia mifuko {lime_bags:.1f} ya chokaa.")
         else:
-            if lang == "English": advice.append(f"✅ **pH**: Healthy ({ph_val:.1f}).")
-            else: advice.append(f"✅ **pH**: Hali Sawa ({ph_val:.1f}).")
+            status = "Healthy" if lang == "English" else "Hali Sawa"
+            advice.append(f"✅ **pH**: {status} ({ph_val:.1f}).")
 
         # 4. Stage 1: Basal Calculation (1 mg/kg gap = 1 kg/acre nutrient needed)
         p_val = soil["Extractable Phosphorus (mg/kg)"]
