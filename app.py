@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v7():
+def load_farmiq_engine_v8():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v7()
+engine = load_farmiq_engine_v8()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""

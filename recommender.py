@@ -228,17 +228,6 @@ class FarmIQRecommender:
             total_cost += qty * mp.get(n_type, 2500)
 
         health_score = self.calculate_health_score(soil, reqs)
-        
-        # Crop Calendar Timeline
-        timeline = []
-        if soil["pH"] < 5.5:
-            timeline.append({"week": "Week -2 (Prep)", "action": f"Apply {lime_bags:.1f} bags of Lime to neutralize acidity."})
-        if p_bags > 0:
-            timeline.append({"week": "Week 0 (Planting)", "action": f"Apply {p_bags * farm_size_acres:.1f} bags of {p_type}."})
-        if n_bags > 0:
-            timeline.append({"week": "Week 4 (Top Dress)", "action": f"Apply {n_bags * farm_size_acres:.1f} bags of {n_type}."})
-        if p_val < 10 or n_val < 0.1:
-            timeline.append({"week": "Week 8 (Boost)", "action": "Optional: Apply foliar spray to boost severe nutrient deficits."})
             
         # Comparison logic
         if p_bags == 0 and n_bags == 0:
