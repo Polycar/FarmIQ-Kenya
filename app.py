@@ -92,6 +92,8 @@ with lang_col2:
     lang_choice = st.radio("Lugha", ["English", "Kiswahili"], horizontal=True, label_visibility="collapsed")
 t = LANGS[lang_choice]
 
+with st.sidebar:
+    st.markdown("### 🏛️ B2B Access")
     # Support both Sidebar and Main Page inputs via Session State
     access_input = st.text_input("Officer Access Code", type="password", key="access_input_sidebar")
     officer_pw = st.secrets.get("OFFICER_PASSWORD", "OFFICER2026")
