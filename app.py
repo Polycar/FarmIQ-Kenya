@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v5():
+def load_farmiq_engine_v6():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v5()
+engine = load_farmiq_engine_v6()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -297,7 +297,7 @@ with tab_farmer:
             # Crop Calendar Timeline
             st.markdown("### 📅 3-Month Action Plan")
             timeline = result.get("timeline")
-            if timeline:
+            if timeline and isinstance(timeline, dict):
                 st.caption(f"Based on **{timeline['season']}** for **{result['crop']}**")
                 
                 # Visual Stepper UI
