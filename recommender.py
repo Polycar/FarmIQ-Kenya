@@ -102,6 +102,31 @@ class FarmIQRecommender:
             return None
         return data.iloc[0].to_dict()
 
+    def _get_isda_token(self):
+        """Authenticate with iSDA API and return a JWT token."""
+        try:
+            import streamlit as st
+            username = st.secrets.get("ISDA_USERNAME")
+            password = st.secrets.get("ISDA_PASSWORD")
+        except Exception:
+            username = os.environ.get("ISDA_USERNAME")
+            password = os.environ.get("ISDA_PASSWORD")
+
+        if not username or not password:
+            return None
+
+        try:
+            resp = requests.post(
+                "https://api.isda-africa.com/login",
+                data={"username": username, "password": password},
+                timeout=15
+            )
+            if resp.status_code == 200:
+                return resp.json().get("access_token")
+        except Exception:
+            pass
+        return None
+
     def get_isda_nutrients(self, lat, lon):
         """
         Fetches real-time soil properties from iSDAsoil API
@@ -113,21 +138,27 @@ class FarmIQRecommender:
         except (ValueError, TypeError):
             return None
 
+        token = self._get_isda_token()
+        if not token:
+            return None
+
         properties = [
             "nitrogen_total",
-            "phosphorus_extractable", 
+            "phosphorus_extractable",
             "potassium_extractable",
             "ph",
             "organic_carbon"
         ]
-        
-        base_url = "https://api.isda-africa.com/v1/soilproperty"
+
+        base_url = "https://api.isda-africa.com/isdasoil/v2/soilproperty"
+        headers = {"Authorization": f"Bearer {token}"}
         results = {}
-        
+
         for prop in properties:
             try:
                 response = requests.get(
                     base_url,
+                    headers=headers,
                     params={
                         "lat": lat,
                         "lon": lon,
@@ -138,13 +169,15 @@ class FarmIQRecommender:
                 )
                 if response.status_code == 200:
                     data = response.json()
-                    # iSDA v1 returns a simpler structure: {"value": X, "unit": Y}
-                    value = data.get("value")
-                    if value is not None:
-                        results[prop] = float(value)
+                    # v2 structure: {"property": {"ph": [{"value": {"value": X}}]}}
+                    prop_data = data.get("property", {}).get(prop, [])
+                    if prop_data and len(prop_data) > 0:
+                        value = prop_data[0].get("value", {}).get("value")
+                        if value is not None:
+                            results[prop] = float(value)
             except Exception:
                 continue
-        
+
         return results if results else None
 
     def calculate_health_score(self, soil, reqs):
