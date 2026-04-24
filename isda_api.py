@@ -15,10 +15,9 @@ def get_precision_soil_data(lat, lon):
     """
     
     # Map iSDA technical names -> FarmIQ internal column names
-    # Note: Using the correct spelling 'phosphorus' as per user code
     property_map = {
         "ph":                       "pH",
-        "nitrogen_total":           "Total Nitrogen (mg/kg)",
+        "nitrogen_total":           "Total Nitrogen (g/kg)",
         "phosphorus_extractable":   "Extractable Phosphorus (mg/kg)",
         "potassium_extractable":    "Extractable Potassium (mg/kg)",
         "organic_carbon":           "Organic Carbon (g/kg)"

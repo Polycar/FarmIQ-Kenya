@@ -109,7 +109,7 @@ class FarmIQRecommender:
             return 1 / (1 + np.exp(-5 * (x/x_crit - 0.5)))
         ph = soil["pH"]
         s_ph = np.exp(-(ph - 6.5)**2 / 2.0) 
-        s_n = sig(soil["Total Nitrogen (mg/kg)"], reqs["n_min"])
+        s_n = sig(soil["Total Nitrogen (g/kg)"], reqs["n_min"])
         s_p = sig(soil["Extractable Phosphorus (mg/kg)"], reqs["p_min"])
         s_k = sig(soil["Extractable Potassium (mg/kg)"], reqs["k_min"])
         s_oc = sig(soil["Organic Carbon (g/kg)"], 15.0)
@@ -159,7 +159,7 @@ class FarmIQRecommender:
                     confidence = "High 🟢 (pH at 30m resolution, other nutrients from regional baseline)"
 
         if overrides:
-            for key in ["pH", "Total Nitrogen (mg/kg)", "Extractable Phosphorus (mg/kg)", "Extractable Potassium (mg/kg)"]:
+            for key in ["pH", "Total Nitrogen (g/kg)", "Extractable Phosphorus (mg/kg)", "Extractable Potassium (mg/kg)"]:
                 if key in overrides and overrides[key] is not None:
                     soil[key] = overrides[key]
             data_source = "Lab Override (Ground Truth)" if lang == "English" else "Matokeo ya Maabara"
@@ -309,7 +309,7 @@ class FarmIQRecommender:
             total_cost += qty * mp.get(p_type, 2500)
 
         # 5. Stage 2: Top Dressing Calculation
-        n_val = soil["Total Nitrogen (mg/kg)"]
+        n_val = soil["Total Nitrogen (g/kg)"]
         n_bags = 0
         
         # Check Top Dressing Rules
