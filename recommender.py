@@ -629,58 +629,83 @@ class FarmIQRecommender:
 
     def match_crops_to_soil(self, result, farm_acres=1.0, lang="English"):
         """
-        Reverse recommendation engine.
-        Given soil composition, rank all crops by suitability.
+        Enhanced Reverse recommendation engine.
+        Uses a weighted multi-factor penalty system for high granularity.
         """
         if self.crop_econ.empty:
             return []
             
         soil = result.get("county_data", {})
         ph = soil.get("pH", 7.0)
+        texture = soil.get("Texture", "Loam")
         
-        # Mapping iSDA technical keys to simplified logic
-        # Units: N (g/kg), P (mg/kg), K (mg/kg)
-        n_val = soil.get("Total Nitrogen (mg/kg)", 0) # Fallback to mg/kg if present
-        if n_val == 0: n_val = soil.get("nitrogen_total", 0) * 1000 # Convert g/kg to mg/kg
-        
-        p_val = soil.get("Extractable Phosphorus (mg/kg)", 0)
-        if p_val == 0: p_val = soil.get("phosphorus_extractable", 0)
-        
-        k_val = soil.get("Extractable Potassium (mg/kg)", 0)
-        if k_val == 0: k_val = soil.get("potassium_extractable", 0)
+        # Current Weather Factor (Rainfall in mm for next 7 days)
+        # 138mm is 'Very High', which can cause rot in certain crops
+        rain_val = 0.0
+        try:
+            advice_text = result.get("weather_advice", "")
+            if "(" in advice_text and "mm)" in advice_text:
+                rain_val = float(advice_text.split("(")[1].split("mm")[0])
+        except: pass
 
-        def nutrient_score(val, level):
-            if level == "low": return 1.0
-            elif level == "medium": 
-                threshold = 1.0 if "nitrogen" in str(val).lower() else 15.0 # Simple heuristic
-                return min(val / threshold, 1.0) if val > 0 else 0.5
-            elif level == "high":
-                threshold = 2.0 if "nitrogen" in str(val).lower() else 30.0
-                return min(val / threshold, 1.0) if val > 0 else 0.4
-            return 0.5
+        # Nutrient values (Units: N (g/kg), P (mg/kg), K (mg/kg), Zn (ppm), Al (ppm))
+        n_val = soil.get("nitrogen_total", 0) 
+        p_val = soil.get("phosphorus_extractable", 0)
+        k_val = soil.get("potassium_extractable", 0)
+        zn_val = soil.get("Zinc (ppm)", 2.0)
+        al_val = soil.get("Aluminium (ppm)", 0)
+        oc_val = soil.get("Organic Carbon (g/kg)", 20)
 
         results = []
         for _, row in self.crop_econ.iterrows():
             crop = row["Crop"]
             
-            # pH score
+            # 1. pH Score (Gaussian decay from ideal center)
             ph_min, ph_max = row["ph_min"], row["ph_max"]
-            if ph_min <= ph <= ph_max: ph_score = 1.0
-            elif ph < ph_min: ph_score = max(0, 1 - (ph_min - ph) * 2)
-            else: ph_score = max(0, 1 - (ph - ph_max) * 2)
+            ph_ideal = (ph_min + ph_max) / 2
+            ph_dist = abs(ph - ph_ideal)
+            # Penalty increases the further we are from the ideal center
+            ph_score = max(0, 1.0 - (ph_dist / 1.5)**2) 
             
-            # Nutrient scores (Approximate)
-            n_s = nutrient_score(n_val/1000, row["n_need"]) # Convert back to g/kg for the scoring thresholds
-            p_s = nutrient_score(p_val, row["p_need"])
-            k_s = nutrient_score(k_val/10, row["k_need"]) # K is high, divide by 10 for scoring scale
+            # 2. Nutrient Score (Specific to crop demand)
+            def get_demand_factor(val, level, target):
+                if level == "low": return 1.0 if val >= target*0.5 else 0.8
+                if level == "medium": return 1.0 if val >= target else 0.7
+                if level == "high": return 1.0 if val >= target*1.5 else 0.5
+                return 1.0
+
+            n_s = get_demand_factor(n_val, row["n_need"], 1.5)
+            p_s = get_demand_factor(p_val, row["p_need"], 20.0)
+            k_s = get_demand_factor(k_val, row["k_need"], 200.0)
             
-            match_score = (ph_score * 0.5 + n_s * 0.2 + p_s * 0.2 + k_s * 0.1) * 100
+            # 3. Toxicity & Micronutrient Penalties
+            tox_penalty = 1.0
+            if al_val > 50: tox_penalty *= 0.7 # Aluminium is toxic
+            if zn_val < 1.0: tox_penalty *= 0.9 # Zinc deficiency
+            if oc_val < 10: tox_penalty *= 0.9 # Low organic matter
+            
+            # 4. Weather & Texture Risk (Heavy Rain + Clay = Rot Risk)
+            weather_risk = 1.0
+            if rain_val > 80: # Heavy rain
+                if "Clay" in texture:
+                    # Crops prone to waterlogging (Sorghum/Beans) suffer more
+                    if crop in ["Sorghum", "Beans", "Potatoes"]: weather_risk *= 0.8
+                elif "Sand" in texture:
+                    # High leaching risk for Nitrogen-hungry crops
+                    if row["n_need"] == "high": weather_risk *= 0.9
+            
+            # Calculate final weighted score
+            # pH (40%), NPK (30%), Tox (20%), Weather (10%)
+            match_score = (ph_score * 0.4 + (n_s*0.1 + p_s*0.1 + k_s*0.1) + tox_penalty * 0.2 + weather_risk * 0.1) * 100
+            
+            # Cap at 99 unless it is literally perfect
+            match_score = min(match_score, 99.0) if match_score < 100 else 100.0
             
             gross_income = row["yield_per_acre"] * row["price_per_kg"] * farm_acres
             
-            if match_score >= 85: label = "🥇 EXCELLENT" if lang == "English" else "🥇 BORA SANA"
-            elif match_score >= 70: label = "🥈 VERY GOOD" if lang == "English" else "🥈 NZURI SANA"
-            elif match_score >= 55: label = "🥉 GOOD" if lang == "English" else "🥉 NZURI"
+            if match_score >= 90: label = "🥇 EXCELLENT" if lang == "English" else "🥇 BORA SANA"
+            elif match_score >= 75: label = "🥈 VERY GOOD" if lang == "English" else "🥈 NZURI SANA"
+            elif match_score >= 60: label = "🥉 GOOD" if lang == "English" else "🥉 NZURI"
             else: label = "⚠️ POOR" if lang == "English" else "⚠️ MBAYA"
             
             results.append({
