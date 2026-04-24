@@ -104,17 +104,20 @@ class FarmIQRecommender:
 
         # High-Resolution Override
         data_source = "Regional Baseline (CSV)" if lang == "English" else "Msingi wa Eneo (CSV)"
+        confidence = "Moderate 🟡 (Based on ~100+ historical regional samples)"
         if lat and lon:
             hi_res_ph = self.get_high_res_ph(lat, lon)
             if hi_res_ph:
                 soil["pH"] = hi_res_ph
                 data_source = "30m Satellite Precision" if lang == "English" else "Usahihi wa Satelaiti (30m)"
+                confidence = "High 🟢 (30m spectral resolution data applied)"
 
         if overrides:
             for key in ["pH", "Total Nitrogen (mg/kg)", "Extractable Phosphorus (mg/kg)", "Extractable Potassium (mg/kg)"]:
                 if key in overrides and overrides[key] is not None:
                     soil[key] = overrides[key]
             data_source = "Lab Override (Ground Truth)" if lang == "English" else "Matokeo ya Maabara"
+            confidence = "Maximum 🔵 (Ground truth lab data)"
 
         # --- SCIENTIFIC LOGIC: NUTRIENT GAP CALCULATION ---
         # Baseline Prices (2026 Est. KES per 50kg bag)
@@ -180,20 +183,41 @@ class FarmIQRecommender:
 
         health_score = self.calculate_health_score(soil, reqs)
         
+        # Crop Calendar Timeline
+        timeline = []
+        if soil["pH"] < 5.5:
+            timeline.append({"week": "Week -2 (Prep)", "action": f"Apply {lime_bags:.1f} bags of Lime to neutralize acidity."})
+        if p_bags > 0:
+            timeline.append({"week": "Week 0 (Planting)", "action": f"Apply {p_bags * farm_size_acres:.1f} bags of {p_type}."})
+        if n_bags > 0:
+            timeline.append({"week": "Week 4 (Top Dress)", "action": f"Apply {n_bags * farm_size_acres:.1f} bags of {n_type}."})
+        if p_val < 10 or n_val < 0.1:
+            timeline.append({"week": "Week 8 (Boost)", "action": "Optional: Apply foliar spray to boost severe nutrient deficits."})
+            
         # Comparison logic
         comp_rec = f"{p_type} + {n_type}" if p_bags > 0 and n_bags > 0 else p_type if p_bags > 0 else n_type
         
+        reason = "Generally meets requirements."
+        if current_fert == "CAN" and p_bags > 0:
+            reason = "Lacks Phosphorus needed for strong root development."
+        elif current_fert == "DAP" and n_bags > 0:
+            reason = "Lacks sufficient Nitrogen for vegetative growth later."
+        elif current_fert in ["None", "Manure"]:
+            reason = "Nutrient density is too low for commercial yields."
+        elif current_fert == "NPK":
+            reason = "Generic blend. Ratio may not match your exact soil deficit."
+            
         # Nutrient Status Flags for Database Compatibility
         is_n_low = n_val < 0.2
         is_p_low = p_val < 30
         is_k_low = soil["Extractable Potassium (mg/kg)"] < 150
 
         return {
-            "county_data": soil, "crop": crop, "current_fert": current_fert, "advice": advice,
+            "county_data": soil, "crop": crop, "current_fert": current_fert, "advice": advice, "timeline": timeline,
             "budget": {"breakdown": breakdown, "total_budget": int(total_cost), "farm_size": farm_size_acres},
             "is_acidic": is_acidic, "is_n_low": is_n_low, "is_p_low": is_p_low, "is_k_low": is_k_low,
-            "health_score": health_score, "data_source": data_source,
-            "comparison": {"current": current_fert, "recommended": comp_rec, "impact": "Optimized Recovery"}
+            "health_score": health_score, "data_source": data_source, "confidence": confidence,
+            "comparison": {"current": current_fert, "recommended": comp_rec, "current_flaw": reason, "impact": "Optimized Recovery"}
         }
 
     def generate_sms_summary(self, result, lang="English"):

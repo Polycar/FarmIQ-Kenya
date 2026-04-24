@@ -219,6 +219,9 @@ with tab_farmer:
                 <div style="background-color: {ds_color}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; width: fit-content; margin-bottom: 5px;">
                     🧬 Source: {result['data_source']}
                 </div>
+                <div style="font-size: 0.8rem; color: #475569; margin-bottom: 10px;">
+                    📡 {result['confidence']}
+                </div>
                 """, unsafe_allow_html=True)
                 st.caption(f"{t['mapping_source']} {selected_county} County")
 
@@ -257,10 +260,19 @@ with tab_farmer:
             # The Switch (Comparison)
             st.markdown("### 🔄 The Switch: Impact Analysis")
             comp = result['comparison']
-            st.markdown(f'<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;"><table style="width: 100%;"><tr><th>Feature</th><th>Current Habit</th><th style="color: #16a34a;">FarmIQ Recommendation</th></tr><tr><td>Fertilizer</td><td>{comp["current"]}</td><td style="color: #16a34a; font-weight:bold;">{comp["recommended"]}</td></tr><tr><td>Outcome</td><td>Variable</td><td style="color: #16a34a; font-weight:bold;">{comp["impact"]}</td></tr></table></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;"><table style="width: 100%;"><tr><th>Feature</th><th>Your Habit ({comp["current"]})</th><th style="color: #16a34a;">FarmIQ Recommendation</th></tr><tr><td>Strategy</td><td style="color: #ef4444; font-size:0.9rem;">{comp["current_flaw"]}</td><td style="color: #16a34a; font-weight:bold;">{comp["recommended"]}</td></tr><tr><td>Outcome</td><td>Variable Yield</td><td style="color: #16a34a; font-weight:bold;">{comp["impact"]}</td></tr></table></div>', unsafe_allow_html=True)
 
-            # Budget
-            st.markdown(f"### 💰 {t['budget_title']}")
+            # Crop Calendar Timeline
+            st.markdown("### 📅 Application Calendar")
+            if result.get("timeline"):
+                for t_item in result["timeline"]:
+                    st.info(f"**{t_item['week']}**: {t_item['action']}")
+            else:
+                st.success("Soil is optimally balanced. No major amendments required.")
+
+            # Budget -> Shopping List
+            st.markdown(f"### 🛒 Fertilizer Shopping List")
+            st.caption(f"Exact quantities required for your **{farm_acres} acres**.")
             cbA, cbB = st.columns([1, 2])
             with cbA: st.metric(t["total_cost"], f"KES {result['budget']['total_budget']:,}")
             with cbB:
@@ -329,10 +341,12 @@ with tab_farmer:
             
             # --- Action Buttons: WhatsApp & PDF & SMS ---
             st.write("")
-            st.markdown("### 📤 Share & Save")
+            st.markdown("### 📤 Share Results")
+            # Build timeline string for WhatsApp
+            timeline_str = "\n".join([f"🗓️ {t['week']}: {t['action']}" for t in result.get("timeline", [])])
+            shopping_str = "\n".join([f"🛒 {line}" for line in result['budget']['breakdown']])
             
-            # WhatsApp Share
-            detailed_summary = f"🌱 FarmIQ Soil Report ({selected_county})\n📊 Crop: {result['crop']}\n🧪 Health Score: {result['health_score']}/100\n🚜 Rec: {result['comparison']['recommended']}\n💰 Budget: KES {result['budget']['total_budget']:,}"
+            detailed_summary = f"🌱 FarmIQ Soil Report ({selected_county})\n📊 Crop: {result['crop']}\n🧪 Health Score: {result['health_score']}/100\n\n🚜 Shopping List ({farm_acres} Acres):\n{shopping_str}\n💰 Est. Budget: KES {result['budget']['total_budget']:,}\n\n📅 Calendar:\n{timeline_str}"
             import urllib.parse
             st.markdown(f'<a href="https://api.whatsapp.com/send?text={urllib.parse.quote(detailed_summary)}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; padding: 0.75rem; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 10px;">✅ {t["share"]}</div></a>', unsafe_allow_html=True)
             
