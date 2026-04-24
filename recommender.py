@@ -400,6 +400,7 @@ class FarmIQRecommender:
             ph_display += f" (90% Confidence Range: {soil['pH_bounds'][0]:.1f}-{soil['pH_bounds'][1]:.1f})"
 
         if is_acidic:
+            al_val = soil.get("Aluminium (ppm)", 0)
             # Formula: Gap * 10 bags/acre
             gap = reqs["ph_min"] - ph_val
             lime_bags = gap * 10 * farm_size_acres
