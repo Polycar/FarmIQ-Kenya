@@ -5,3 +5,4 @@ numpy
 fpdf2
 SQLAlchemy
 streamlit-geolocation
+google-generativeai
