@@ -45,21 +45,27 @@ def get_weather_context(lat, lon):
         
         # Scenario 1: Heavy Rain (Risk of Runoff)
         if total_rain > 50:
-            # Find the first clear day (< 2mm rain) in the API forecast
+            # Find the first 48-hour clear window in the API forecast
+            # (Day i < 2mm AND Day i+1 < 5mm)
             clear_day = None
-            for t, p in zip(time_list, precip_list):
-                if p is not None and p < 2.0:
-                    clear_day = t
+            for i in range(len(precip_list) - 1):
+                p_current = precip_list[i]
+                p_next = precip_list[i+1]
+                
+                if p_current is not None and p_current < 2.0 and p_next is not None and p_next < 5.0:
+                    # Skip today if it's already part of the heavy rain total
+                    if i == 0 and total_rain > 50:
+                        continue
+                    clear_day = time_list[i]
                     break
             
             if clear_day:
-                # Format the date nicely
                 try:
                     date_obj = pd.to_datetime(clear_day)
                     date_str = date_obj.strftime('%A, %b %d')
                 except:
                     date_str = clear_day
-                return f"🌧️ **Heavy rain expected** ({total_rain:.1f}mm) — hold off on fertilizer to avoid runoff. **Safe window opens on {date_str}**."
+                return f"🌧️ **Heavy rain expected** ({total_rain:.1f}mm) — hold off on fertilizer to avoid runoff. **Safe 48hr window starts on {date_str}**."
             else:
                 return f"🌧️ **Heavy rain expected** ({total_rain:.1f}mm) — runoff risk is high for the next 7 days. Hold off application."
 
