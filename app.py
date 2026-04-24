@@ -459,7 +459,12 @@ with tab_farmer:
             st.write("")
             st.markdown("### 📤 Share Results")
             # Build timeline string for WhatsApp
-            timeline_str = "\n".join([f"🗓️ {t['week']}: {t['action']}" for t in result.get("timeline", [])])
+            tl = result.get("timeline", {})
+            if isinstance(tl, dict):
+                timeline_str = f"📅 M1: {tl.get('month_1', '')}\n📅 M2: {tl.get('month_2', '')}\n📅 M3: {tl.get('month_3', '')}"
+            else:
+                timeline_str = ""
+            
             shopping_str = "\n".join([f"🛒 {line}" for line in result['budget']['breakdown']])
             
             detailed_summary = f"🌱 FarmIQ Soil Report ({selected_county})\n📊 Crop: {result['crop']}\n🧪 Health Score: {result['health_score']}/100\n\n🚜 Shopping List ({farm_acres} Acres):\n{shopping_str}\n💰 Est. Budget: KES {result['budget']['total_budget']:,}\n\n📅 Calendar:\n{timeline_str}"
