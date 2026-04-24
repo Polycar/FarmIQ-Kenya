@@ -231,6 +231,17 @@ class FarmIQRecommender:
                 timeline["month_1"] = "Kupogoa na Matengenezo ya Jumla"
                 timeline["month_2"] = f"Kulisha kwa Kwanza ({p_type})"
                 timeline["month_3"] = f"Mzunguko wa Kuchuma na Kulisha kwa Pili ({n_type})"
+        elif crop == "Avocado":
+            timeline = {
+                "season": season_en if lang == "English" else season_sw,
+                "month_1": f"Tree Maintenance & Manuring",
+                "month_2": f"Basal Application ({p_type})",
+                "month_3": f"Foliar Feeding & Pest Scouting"
+            }
+            if lang == "Kiswahili":
+                timeline["month_1"] = "Utunzaji wa Miti na Mbolea ya Samadi"
+                timeline["month_2"] = f"Kuweka Mbolea ya Kupandia ({p_type})"
+                timeline["month_3"] = f"Kulisha kwa Majani na Kuangalia Wadudu"
         else:
             timeline = {
                 "season": season_en if lang == "English" else season_sw,
