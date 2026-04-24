@@ -1,0 +1,16 @@
+Crop,ph_min,ph_max,n_need,p_need,k_need,price_per_kg,yield_per_acre
+Maize,5.5,7.0,high,high,medium,35,1500
+Beans,6.0,7.0,low,medium,low,120,800
+Potatoes,5.0,6.5,high,high,high,40,6000
+Tomatoes,6.0,7.0,high,high,high,60,8000
+Kale (Sukuma),5.5,7.0,high,medium,medium,20,6000
+Wheat,6.0,7.5,high,high,medium,45,1200
+Sorghum,5.0,6.5,low,low,low,30,1200
+Avocado,5.0,6.5,medium,medium,high,80,3000
+Tea,4.5,5.5,high,medium,medium,22,3000
+Finger Millet,5.0,6.5,low,low,low,50,600
+Cassava,5.0,6.5,low,low,medium,15,5000
+Sweet Potato,5.0,6.5,low,medium,high,25,4000
+Groundnuts,5.5,7.0,low,medium,medium,100,500
+Cowpeas,5.0,6.5,low,low,low,80,400
+Sunflower,6.0,7.5,medium,medium,medium,55,800

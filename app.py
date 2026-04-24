@@ -455,6 +455,29 @@ with tab_farmer:
                 else:
                     st.warning(weather_advice, icon="⚠️")
 
+            # --- Reverse Recommendation (Best Crop Matches) ---
+            st.markdown(f"### 🌱 {('Crop Suitability Match' if lang_choice == 'English' else 'Mazao Yanayofaa Zaidi')}")
+            with st.expander("🧐 View Best Matches for Your Soil", expanded=False):
+                matches = engine.match_crops_to_soil(result, farm_acres=farm_acres, lang=lang_choice)
+                if matches:
+                    st.write("Based on your soil's pH and nutrient levels, here are the crops with the highest success probability:")
+                    for m in matches:
+                        col_m1, col_m2 = st.columns([2, 1])
+                        with col_m1:
+                            st.markdown(f"**{m['crop']}**")
+                            # Color bar for match score
+                            color = "#16a34a" if m['match_score'] >= 85 else "#eab308" if m['match_score'] >= 70 else "#f97316"
+                            st.markdown(f"""
+                            <div style="background-color: #e2e8f0; border-radius: 10px; width: 100%; height: 8px; margin: 5px 0;">
+                                <div style="background-color: {color}; width: {m['match_score']}%; height: 100%; border-radius: 10px;"></div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            st.caption(f"{m['label']} ({m['match_score']}% Match)")
+                        with col_m2:
+                            st.metric("Est. Gross", f"KES {m['gross_income']:,}")
+                else:
+                    st.info("Optimization engine is still loading data...")
+
             # --- AI Agronomist Layer ---
             if ai_key:
                 st.markdown(f"### 👨‍🌾 {('AI Expert Briefing' if lang_choice == 'English' else 'Ushauri wa Mtaalamu wa AI')}")
@@ -658,5 +681,16 @@ if is_officer:
                 mime="text/csv",
                 use_container_width=True
             )
+            
+            st.markdown("---")
+            st.markdown("### 💰 Market Pricing Management")
+            st.write("Update current market prices and expected yields to keep farmer ROI estimates accurate.")
+            if not engine.crop_econ.empty:
+                edited_df = st.data_editor(engine.crop_econ, use_container_width=True, hide_index=True, key="econ_editor")
+                if st.button("💾 Save Market Updates", use_container_width=True):
+                    econ_path = os.path.join(os.path.dirname(__file__), "data", "crop_economics.csv")
+                    edited_df.to_csv(econ_path, index=False)
+                    st.success("Market data updated successfully!")
+                    st.rerun()
         else:
             st.info("No queries have been made yet. The dashboard will populate once farmers start using the platform.")

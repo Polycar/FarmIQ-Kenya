@@ -58,6 +58,13 @@ class FarmIQRecommender:
         # Load prices from CSV (editable without touching code)
         prices_path = os.path.join(self.data_dir, "prices.csv")
         self.PRICES = {"Subsidized": {}, "Commercial": {}}
+        
+        # Load Crop Economics for Reverse Recommendation
+        self.crop_econ = pd.DataFrame()
+        econ_path = os.path.join(self.data_dir, "crop_economics.csv")
+        if os.path.exists(econ_path):
+            self.crop_econ = pd.read_csv(econ_path)
+
         if os.path.exists(prices_path):
             pr_df = pd.read_csv(prices_path)
             for _, row in pr_df.iterrows():
@@ -607,6 +614,73 @@ class FarmIQRecommender:
             return response.text
         except Exception as e:
             return f"Error generating AI advisory: {str(e)}"
+
+    def match_crops_to_soil(self, result, farm_acres=1.0, lang="English"):
+        """
+        Reverse recommendation engine.
+        Given soil composition, rank all crops by suitability.
+        """
+        if self.crop_econ.empty:
+            return []
+            
+        soil = result.get("county_data", {})
+        ph = soil.get("pH", 7.0)
+        
+        # Mapping iSDA technical keys to simplified logic
+        # Units: N (g/kg), P (mg/kg), K (mg/kg)
+        n_val = soil.get("Total Nitrogen (mg/kg)", 0) # Fallback to mg/kg if present
+        if n_val == 0: n_val = soil.get("nitrogen_total", 0) * 1000 # Convert g/kg to mg/kg
+        
+        p_val = soil.get("Extractable Phosphorus (mg/kg)", 0)
+        if p_val == 0: p_val = soil.get("phosphorus_extractable", 0)
+        
+        k_val = soil.get("Extractable Potassium (mg/kg)", 0)
+        if k_val == 0: k_val = soil.get("potassium_extractable", 0)
+
+        def nutrient_score(val, level):
+            if level == "low": return 1.0
+            elif level == "medium": 
+                threshold = 1.0 if "nitrogen" in str(val).lower() else 15.0 # Simple heuristic
+                return min(val / threshold, 1.0) if val > 0 else 0.5
+            elif level == "high":
+                threshold = 2.0 if "nitrogen" in str(val).lower() else 30.0
+                return min(val / threshold, 1.0) if val > 0 else 0.4
+            return 0.5
+
+        results = []
+        for _, row in self.crop_econ.iterrows():
+            crop = row["Crop"]
+            
+            # pH score
+            ph_min, ph_max = row["ph_min"], row["ph_max"]
+            if ph_min <= ph <= ph_max: ph_score = 1.0
+            elif ph < ph_min: ph_score = max(0, 1 - (ph_min - ph) * 2)
+            else: ph_score = max(0, 1 - (ph - ph_max) * 2)
+            
+            # Nutrient scores (Approximate)
+            n_s = nutrient_score(n_val/1000, row["n_need"]) # Convert back to g/kg for the scoring thresholds
+            p_s = nutrient_score(p_val, row["p_need"])
+            k_s = nutrient_score(k_val/10, row["k_need"]) # K is high, divide by 10 for scoring scale
+            
+            match_score = (ph_score * 0.5 + n_s * 0.2 + p_s * 0.2 + k_s * 0.1) * 100
+            
+            gross_income = row["yield_per_acre"] * row["price_per_kg"] * farm_acres
+            
+            if match_score >= 85: label = "🥇 EXCELLENT" if lang == "English" else "🥇 BORA SANA"
+            elif match_score >= 70: label = "🥈 VERY GOOD" if lang == "English" else "🥈 NZURI SANA"
+            elif match_score >= 55: label = "🥉 GOOD" if lang == "English" else "🥉 NZURI"
+            else: label = "⚠️ POOR" if lang == "English" else "⚠️ MBAYA"
+            
+            results.append({
+                "crop": crop,
+                "match_score": round(match_score),
+                "label": label,
+                "gross_income": int(gross_income)
+            })
+            
+        results.sort(key=lambda x: x["match_score"], reverse=True)
+        return results[:5]
+
 
 if __name__ == "__main__":
     import os
