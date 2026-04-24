@@ -64,8 +64,9 @@ def save_recommendation(result, farm_acres, lang):
         )
         db.add(record)
         db.commit()
-    except Exception:
-        pass # Fail gracefully to keep the app running
+        return True
+    except Exception as e:
+        return str(e)
     finally:
         db.close()
 

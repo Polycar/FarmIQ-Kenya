@@ -229,15 +229,21 @@ with tab_farmer:
                 if loc_mode == "Select Region (No GPS)" and selected_subcounty and selected_subcounty != "Whole County Average":
                     is_sub = True
 
-                st.session_state.result = engine.generate_recommendation(
+                result = engine.generate_recommendation(
                     selected_county, selected_crop, selected_fert, 
                     farm_size_acres=farm_acres, lang=lang_choice, 
                     lat=lat, lon=lon, overrides=overrides if lab_mode else None,
                     price_mode=pm_key, is_subcounty=is_sub
                 )
+                st.session_state.result = result
                 st.session_state.last_county = selected_county
                 st.session_state.saved_lat = lat
                 st.session_state.saved_lon = lon
+                
+                # Save to DB exactly once when generated
+                save_status = save_recommendation(result, farm_acres, lang_choice)
+                if save_status is not True:
+                    st.toast(f"Database save failed: {save_status}", icon="⚠️")
             
     # Persistence: If result exists in session state, always show it
     if "result" in st.session_state:
@@ -247,7 +253,6 @@ with tab_farmer:
         if "error" in result:
             st.error(result["error"])
         else:
-            save_recommendation(result, farm_acres, lang_choice)
             st.markdown("---")
             
             # Report Section
