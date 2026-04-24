@@ -96,13 +96,13 @@ with st.sidebar:
     st.markdown("### 🏛️ B2B Access")
     access_code = st.text_input("Officer Access Code", type="password")
     officer_pw = st.secrets.get("OFFICER_PASSWORD", "OFFICER2026")
-    is_officer = (access_code == officer_pw)
+    is_officer = (access_code == officer_pw) or (st.session_state.get("main_access") == officer_pw)
     
     st.markdown("---")
     st.markdown("### 👨‍🌾 AI Agronomist Settings")
     ai_key = st.text_input("Gemini API Key", type="password", help="Enter your Google Gemini API key to enable expert AI briefings.")
     if not ai_key:
-        ai_key = st.secrets.get("GEMINI_API_KEY")
+        ai_key = st.session_state.get("main_ai") or st.secrets.get("GEMINI_API_KEY")
 
 # Main Navigation
 if is_officer:
@@ -554,6 +554,20 @@ with tab_farmer:
             # Attribution Footer
             st.divider()
             st.markdown('<div style="text-align: center; color: #64748b; font-size: 0.8rem;">📊 Data Source: iSDAsoil (2021) 30m Map | 🧪 Scientific Basis: Kenyan Agronomic Baselines</div>', unsafe_allow_html=True)
+
+    # --- SETTINGS & ACCESS (Main Page) ---
+    with st.expander("🛠️ Advanced Settings & Officer Login"):
+        sf1, sf2 = st.columns(2)
+        with sf1:
+            st.markdown("### 🏛️ B2B Login")
+            st.text_input("Officer Access Code ", type="password", key="main_access", help="Enter password to unlock B2B Dashboard")
+        with sf2:
+            st.markdown("### 👨‍🌾 AI Setup")
+            st.text_input("Gemini API Key ", type="password", key="main_ai", help="Enter API key to unlock AI Agronomist")
+        if st.session_state.get("main_access") or st.session_state.get("main_ai"):
+            st.info("Credentials updated. Refreshing...")
+            st.rerun()
+
 
 # --- YIELD TRACKING TAB ---
 with tab_yield:
