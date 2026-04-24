@@ -388,10 +388,14 @@ class FarmIQRecommender:
         fert_p_analysis = ANALYSIS.get(p_type, {"P": 0.46})["P"]
         p_bags = (p_gap / (fert_p_analysis * 50)) if fert_p_analysis > 0 else 0
         
-        if p_bags > 0:
+        if p_bags >= 0.05:
             qty = p_bags * farm_size_acres
             breakdown.append(f"Stage 1 (Basal): {qty:.2f} x bags {p_type}")
             total_cost += qty * mp.get(p_type, 0)
+        else:
+            p_bags = 0
+            if lang == "English": advice.append(f"✅ **Phosphorus**: Sufficient ({p_val:.1f} mg/kg). No basal P required.")
+            else: advice.append(f"✅ **Fosforasi**: Inatosha ({p_val:.1f} mg/kg). Hakuna mbolea ya P inayohitajika.")
 
         # 5. Stage 2: Top Dressing Calculation
         n_val = soil["Total Nitrogen (g/kg)"]
@@ -411,22 +415,30 @@ class FarmIQRecommender:
                 fert_n_analysis = ANALYSIS.get(n_type, {"N": 0.26})["N"]
                 n_bags = (n_gap / (fert_n_analysis * 50)) if fert_n_analysis > 0 else 0
                 
-                if n_bags > 0:
+                if n_bags >= 0.05:
                     qty = n_bags * farm_size_acres
                     if lang == "English":
                         advice.append(f"🚀 **Stage 2 (Top Dress)**: Apply {qty:.1f} bags {n_type} at **{rule['Timing']}**. {rule['Instruction']}")
                     else:
                         advice.append(f"🚀 **Hatua ya 2 (Kukuzia)**: Tumia mifuko {qty:.1f} za {n_type} wakati wa **{rule['Timing']}**. {rule['Instruction']}")
+                else:
+                    n_bags = 0
+                    if lang == "English": advice.append(f"✅ **Nitrogen**: Sufficient ({n_val:.2f} g/kg). No top dress required.")
+                    else: advice.append(f"✅ **Nitrojeni**: Inatosha ({n_val:.2f} g/kg). Hakuna mbolea ya kukuzia inayohitajika.")
         else:
             # Fallback
             n_gap = max(0, reqs["n_min"] - n_val)
             fert_n_analysis = ANALYSIS.get(n_type, {"N": 0.26})["N"]
             n_bags = (n_gap / (fert_n_analysis * 50)) if fert_n_analysis > 0 else 0
         
-        if n_bags > 0:
+        if n_bags >= 0.05:
             qty = n_bags * farm_size_acres
             breakdown.append(f"Stage 2 (Top Dress): {qty:.2f} x bags {n_type}")
             total_cost += qty * mp.get(n_type, 0)
+        elif td_rule.empty:
+            n_bags = 0
+            if lang == "English": advice.append(f"✅ **Nitrogen**: Sufficient ({n_val:.2f} g/kg). No top dress required.")
+            else: advice.append(f"✅ **Nitrojeni**: Inatosha ({n_val:.2f} g/kg). Hakuna mbolea ya kukuzia inayohitajika.")
 
         # 6. Foliar Feed (Data-driven from crop_requirements.csv)
         if reqs.get("foliar", 0) == 1:
