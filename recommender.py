@@ -187,44 +187,47 @@ class FarmIQRecommender:
         else:
             advice.append("☀️ **Season**: Dry period. Land preparation phase." if lang == "English" else "☀️ **Msimu**: Kiangazi. Tayarisha shamba sasa.")
 
-        # Extract 3-Month Timeline from Crop Calendars CSV
+        # 1. Base Strategy (calculated early for action plan)
+        ph_val = soil["pH"]
+        k_val = soil["Extractable Potassium (mg/kg)"]
+        if k_val < reqs["k_min"]:
+            p_type = "NPK 17:17:17"
+        elif ph_val < 5.5:
+            p_type = "Mavuno" if crop in ["Maize", "Sorghum", "Wheat"] else "SSP"
+        else:
+            p_type = "DAP"
+        
+        n_type = "CAN" if ph_val < 5.5 else "Urea"
+
+        # 2. Extract 3-Month Timeline from Crop Calendars CSV
         timeline = None
         if not self.crop_calendars.empty:
             cal_match = self.crop_calendars[(self.crop_calendars["Crop"] == crop) & (self.crop_calendars["Season"] == season_en)]
             if not cal_match.empty:
                 r = cal_match.iloc[0]
+                m1 = str(r["Month_1"]).replace("(DAP/NPK)", f"({p_type})")
+                m3 = str(r["Month_3"]).replace("(CAN/Urea)", f"({n_type})")
                 timeline = {
                     "season": season_en if lang == "English" else season_sw,
-                    "month_1": r["Month_1"],
+                    "month_1": m1,
                     "month_2": r["Month_2"],
-                    "month_3": r["Month_3"]
+                    "month_3": m3
                 }
 
-        # 1. Acidity & Liming
+        # 3. Acidity & Liming
         is_acidic = soil["pH"] < reqs["ph_min"]
-        if soil["pH"] < 5.5:
+        if ph_val < 5.5:
             lime_bags = 2.0 * farm_size_acres
             breakdown.append(f"Basal Adj: {lime_bags:.1f} x bags Lime")
             total_cost += lime_bags * mp.get("Lime", 1800)
-            if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {soil['pH']:.1f}. Apply Lime to unlock nutrients.")
-            else: advice.append(f"🚨 **Asidi Kali**: pH {soil['pH']:.1f}. Tumia chokaa kurekebisha udongo.")
+            if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_val:.1f}. Apply Lime to unlock nutrients.")
+            else: advice.append(f"🚨 **Asidi Kali**: pH {ph_val:.1f}. Tumia chokaa kurekebisha udongo.")
         else:
-            if lang == "English": advice.append(f"✅ **pH**: Healthy ({soil['pH']:.1f}).")
-            else: advice.append(f"✅ **pH**: Hali Sawa ({soil['pH']:.1f}).")
+            if lang == "English": advice.append(f"✅ **pH**: Healthy ({ph_val:.1f}).")
+            else: advice.append(f"✅ **pH**: Hali Sawa ({ph_val:.1f}).")
 
-        # 2. Stage 1: Basal/Planting (Phosphorus & Potassium focus)
+        # 4. Stage 1: Basal Calculation
         p_val = soil["Extractable Phosphorus (mg/kg)"]
-        k_val = soil["Extractable Potassium (mg/kg)"]
-        ph_val = soil["pH"]
-        
-        # Dynamic Selection
-        if k_val < reqs["k_min"]:
-            p_type = "NPK 17:17:17"
-        elif ph_val < 5.5:
-            # Mavuno is a specialized blend for cereals in acidic soils
-            p_type = "Mavuno" if crop in ["Maize", "Sorghum", "Wheat"] else "SSP"
-        else:
-            p_type = "DAP"
 
         p_gap = max(0, reqs["p_min"] - p_val)
         p_bags = 0
@@ -237,10 +240,9 @@ class FarmIQRecommender:
             breakdown.append(f"Stage 1 (Basal): {qty:.1f} x bags {p_type}")
             total_cost += qty * mp.get(p_type, 2500)
 
-        # 3. Stage 2: Top Dressing (Nitrogen focus)
+        # 5. Stage 2: Top Dressing (Nitrogen focus)
         n_val = soil["Total Nitrogen (mg/kg)"]
         n_bags = 0
-        n_type = "CAN" if ph_val < 5.5 else "Urea"
         
         # Check Top Dressing Rules
         td_rule = self.top_dress_rules[self.top_dress_rules["Crop"] == crop] if not self.top_dress_rules.empty else pd.DataFrame()
@@ -293,6 +295,10 @@ class FarmIQRecommender:
             reason = get_reason("P_Deficit_with_CAN")
         elif "DAP" in current_fert and n_bags > 0:
             reason = get_reason("N_Deficit_with_DAP")
+        elif ("DAP" in current_fert or "NPK" in current_fert) and ph_val < 5.5:
+            reason = get_reason("Acidic_with_DAP")
+        elif "DAP" in current_fert and k_val < reqs["k_min"]:
+            reason = get_reason("K_Deficit_with_DAP")
         elif current_fert in ["None", "Manure"] and (p_bags > 0 or n_bags > 0):
             reason = get_reason("Low_Density")
         elif current_fert == "NPK":

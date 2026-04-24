@@ -8,3 +8,7 @@ Default,Generally meets requirements.,Kwa ujumla inakidhi mahitaji.
 Impact_Optimized,Optimized Recovery,Uboreshaji Uliopangwa
 Impact_Variable,Variable Yield,Mavuno Yasiyo na Uhakika
 Rec_Optimal,None required (Optimal Soil),Mbolea haihitajiki (Udongo uko Sawa)
+Acidic_with_DAP,DAP is acidifying. Switch to Mavuno/SSP to protect soil pH.,DAP inaongeza asidi. Tumia Mavuno/SSP kulinda udongo.
+Acidic_with_NPK,Soil is acidic. Mavuno/SSP is safer for long-term health.,Udongo una asidi. Mavuno/SSP ni salama zaidi kwa afya.
+K_Deficit_with_DAP,Lacks Potassium (K) detected in your soil.,Haina Potasiamu (K) iliyopatikana kwenye udongo wako.
+K_Deficit_with_CAN,Lacks Potassium (K) and Phosphorus (P).,Haina Potasiamu (K) na Fosforasi (P).
