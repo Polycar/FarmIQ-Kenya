@@ -7,6 +7,7 @@ from report_gen import generate_report_pdf
 from dealers import get_dealers_by_county
 from database import save_recommendation, get_all_records, get_stats
 from streamlit_geolocation import streamlit_geolocation
+from weather import get_weather_context
 
 # Set page config for mobile-friendly responsive layout
 st.set_page_config(
@@ -188,6 +189,8 @@ with tab_farmer:
                     price_mode=pm_key
                 )
                 st.session_state.last_county = selected_county
+                st.session_state.saved_lat = lat
+                st.session_state.saved_lon = lon
             
     # Persistence: If result exists in session state, always show it
     if "result" in st.session_state:
@@ -233,6 +236,23 @@ with tab_farmer:
                 - **Nutrients (60% Weight)**: N, P, K, and Organic Carbon are measured using sigmoidal (S-curve) logic to account for 'Diminishing Returns' (excessive nutrients don't help once sufficiency is reached).
                 """)
 
+            # Nutrient Impact Visualization
+            st.markdown("### 📈 Nutrient Impact Dashboard")
+            # Calculate deficiency gaps for chart
+            p_val = result['county_data']['Extractable Phosphorus (mg/kg)']
+            n_val = result['county_data']['Total Nitrogen (mg/kg)']
+            k_val = result['county_data']['Extractable Potassium (mg/kg)']
+            
+            # Simple Normalized sufficiency levels for chart (0.0 to 1.0)
+            chart_data = pd.DataFrame({
+                "Nutrient": ["Phosphorus (P)", "Nitrogen (N)", "Potassium (K)"],
+                "Current Level": [min(p_val/30, 1.0), min(n_val/0.2, 1.0), min(k_val/250, 1.0)],
+                "Recommended": [1.0, 1.0, 1.0]
+            }).set_index("Nutrient")
+            
+            st.bar_chart(chart_data, color=["#f87171", "#34d399"]) # Red (Current) vs Green (Target)
+            st.caption("🔴 Red: Current Deficiency | 🟢 Green: Recommended Target Hub")
+
             # The Switch (Comparison)
             st.markdown("### 🔄 The Switch: Impact Analysis")
             comp = result['comparison']
@@ -259,36 +279,46 @@ with tab_farmer:
                 elif any(x in item for x in ["💡", "Msimu"]): st.info(item, icon="💡")
                 else: st.success(item, icon="✅")
 
-            # --- Action Buttons: WhatsApp & PDF & SMS ---
-            st.write("")
-            
-            # WhatsApp Share
-            st.markdown("### 📤 Share Results")
-            detailed_summary = f"🌱 FarmIQ Soil Report ({selected_county})\n📊 Crop: {result['crop']}\n🧪 Health Score: {result['health_score']}/100\n🚜 Rec: {result['comparison']['recommended']}\n💰 Budget: KES {result['budget']['total_budget']:,}"
-            import urllib.parse
-            st.markdown(f'<a href="https://api.whatsapp.com/send?text={urllib.parse.quote(detailed_summary)}" target="_blank" style="text-decoration:none;"><div style="background-color: #25D366; color: white; padding: 0.75rem; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 10px;">✅ {t["share"]}</div></a>', unsafe_allow_html=True)
-            
-            # PDF Download
-            pdf_bytes = generate_report_pdf(result, lang_choice)
-            st.download_button(
-                label=f"📄 {t['download_pdf']}",
-                data=pdf_bytes,
-                file_name=f"FarmIQ_Report_{selected_county}_{datetime.datetime.now().strftime('%Y%m%d')}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
+            # Weather Context
+            saved_lat = st.session_state.get('saved_lat')
+            saved_lon = st.session_state.get('saved_lon')
+            if saved_lat is not None and saved_lon is not None and saved_lat != 0.0 and saved_lon != 0.0:
+                with st.spinner("Fetching 7-day weather forecast..."):
+                    weather_advice = get_weather_context(saved_lat, saved_lon)
+                if weather_advice:
+                    st.markdown("### ⛅ 7-Day Weather Context")
+                    if "✅" in weather_advice:
+                        st.success(weather_advice, icon="✅")
+                    elif "🌧️" in weather_advice:
+                        st.error(weather_advice, icon="🌧️")
+                    else:
+                        st.warning(weather_advice, icon="⚠️")
 
-            # SMS Fallback Simulator Toggle
-            if st.button(f"📲 {t['sms_button']}", key="sms_btn", use_container_width=True):
-                st.session_state.show_sms = True
-            
+
             # Shared Components (Dealers)
             dealers = get_dealers_by_county(selected_county)
             with st.expander(f"📍 {t['dealers_title']}"):
+                import urllib.parse
+                
+                saved_lat = st.session_state.get('saved_lat')
+                saved_lon = st.session_state.get('saved_lon')
+                
+                # Dynamic GPS-based local search if coordinates exist
+                if saved_lat and saved_lon and saved_lat != 0.0 and saved_lon != 0.0:
+                    gps_search = f"https://www.google.com/maps/search/Agrovet+Fertilizer/@{saved_lat},{saved_lon},14z"
+                    st.markdown(f'<a href="{gps_search}" target="_blank" style="text-decoration: none;"><div style="background-color: #16a34a; color: white; padding: 0.6rem 1rem; border-radius: 8px; text-align: center; font-size: 0.9rem; font-weight: bold; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">🌍 Search All Agrovets Near My Location</div></a>', unsafe_allow_html=True)
+                
                 for d in dealers:
-                    st.markdown(f"**{d['name']}** ({d['town']})")
-                    maps_url = f"https://www.google.com/maps/search/?api=1&query={d['name'].replace(' ', '+')}+{d['town'].replace(' ', '+')}+Kenya"
-                    st.markdown(f'<a href="{maps_url}" target="_blank" style="text-decoration: none;"><div style="background-color: #007bff; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 1rem;">📍 Directions</div></a>', unsafe_allow_html=True)
+                    if d['county'] == "All":
+                        # National distributors: We do not have their exact addresses in the DB. 
+                        # Providing a map link for them gives wrong directions, so we just list them.
+                        st.markdown(f"**{d['name']}** (Available at {selected_county} County Depot)")
+                    else:
+                        # Specific local dealers: Provide a simple, reliable Google Maps search
+                        st.markdown(f"**{d['name']}** ({d['town']})")
+                        search_query = f"{d['name']} {d['town']} Kenya"
+                        maps_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(search_query)}"
+                        st.markdown(f'<a href="{maps_url}" target="_blank" style="text-decoration: none;"><div style="background-color: #007bff; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 1rem;">📍 Search on Map</div></a>', unsafe_allow_html=True)
             
             # --- Action Buttons: WhatsApp & PDF & SMS ---
             st.write("")
