@@ -35,6 +35,12 @@ class FarmIQRecommender:
         td_path = os.path.join(self.data_dir, 'top_dressing.csv')
         if os.path.exists(td_path):
             self.top_dress_rules = pd.read_csv(td_path)
+            
+        # Load Comparison Reasons
+        self.comp_reasons = pd.DataFrame()
+        cr_path = os.path.join(self.data_dir, 'comparison_reasons.csv')
+        if os.path.exists(cr_path):
+            self.comp_reasons = pd.read_csv(cr_path)
         
         self.raster_path = os.path.join(os.path.dirname(__file__), "data", "rasters", "kenya_ph.tif")
         
@@ -269,23 +275,32 @@ class FarmIQRecommender:
 
         health_score = self.calculate_health_score(soil, reqs)
             
-        # Comparison logic
+        # Comparison logic helper
+        def get_reason(cond_key):
+            if self.comp_reasons.empty: return cond_key
+            row = self.comp_reasons[self.comp_reasons["Condition"] == cond_key]
+            if row.empty: return cond_key
+            return row.iloc[0]["Reason_SW"] if lang == "Kiswahili" else row.iloc[0]["Reason_EN"]
+
         if p_bags == 0 and n_bags == 0:
-            comp_rec = "None required (Optimal Soil)"
+            comp_rec = get_reason("Rec_Optimal")
         else:
             comp_rec = f"{p_type} + {n_type}" if p_bags > 0 and n_bags > 0 else p_type if p_bags > 0 else n_type
         
-        reason = "Generally meets requirements."
+        reason = get_reason("Default")
         if "CAN" in current_fert and p_bags > 0:
-            reason = "Lacks Phosphorus needed for strong root development."
+            reason = get_reason("P_Deficit_with_CAN")
         elif "DAP" in current_fert and n_bags > 0:
-            reason = "Lacks sufficient Nitrogen for vegetative growth later."
+            reason = get_reason("N_Deficit_with_DAP")
         elif current_fert in ["None", "Manure"] and (p_bags > 0 or n_bags > 0):
-            reason = "Nutrient density is too low for commercial yields."
+            reason = get_reason("Low_Density")
         elif current_fert == "NPK":
-            reason = "Generic blend. Ratio may not match your exact soil deficit."
+            reason = get_reason("NPK_Generic")
         elif p_bags == 0 and n_bags == 0:
-            reason = "Soil is optimal; current fertilizer is unnecessary."
+            reason = get_reason("Optimal")
+            
+        impact_rec = get_reason("Impact_Optimized")
+        impact_cur = get_reason("Impact_Variable")
             
         # Nutrient Status Flags for Database Compatibility
         is_n_low = n_val < 0.2
@@ -297,7 +312,7 @@ class FarmIQRecommender:
             "budget": {"breakdown": breakdown, "total_budget": int(total_cost), "farm_size": farm_size_acres},
             "is_acidic": is_acidic, "is_n_low": is_n_low, "is_p_low": is_p_low, "is_k_low": is_k_low,
             "health_score": health_score, "data_source": data_source, "confidence": confidence,
-            "comparison": {"current": current_fert, "recommended": comp_rec, "current_flaw": reason, "impact": "Optimized Recovery"}
+            "comparison": {"current": current_fert, "recommended": comp_rec, "current_flaw": reason, "impact": impact_rec, "current_outcome": impact_cur}
         }
 
     def generate_sms_summary(self, result, lang="English"):

@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v12():
+def load_farmiq_engine_v13():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v12()
+engine = load_farmiq_engine_v13()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -63,6 +63,9 @@ LANGS = {
         "mapping_source": "Precision Mapping for", "budget_title": "Budget Estimate", "total_cost": "Total Cost",
         "advice_title": "Actionable Advice", "share": "Share WhatsApp", "download_pdf": "Download PDF",
         "dealers_title": "🛍️ Suppliers Nearby", "directions": "Directions", "sms_button": "SMS Fallback",
+        "switch_title": "The Switch: Impact Analysis",
+        "table_feature": "Feature", "table_habit": "Your Habit", "table_rec": "FarmIQ Recommendation",
+        "table_strategy": "Strategy", "table_outcome": "Outcome",
         "status": {"low": "Low", "optimal": "Optimal", "acidic": "Acidic", "good": "Healthy"}
     },
     "Kiswahili": {
@@ -71,6 +74,9 @@ LANGS = {
         "mapping_source": "Ramani ya", "budget_title": "Gharama", "total_cost": "Gharama Jumla",
         "advice_title": "Ushauri", "share": "Shiriki WhatsApp", "download_pdf": "Pakua PDF",
         "dealers_title": "🛍️ Wauzaji", "directions": "Maelekezo", "sms_button": "SMS",
+        "switch_title": "Mabadiliko: Uchambuzi wa Matokeo",
+        "table_feature": "Kipengele", "table_habit": "Tabia Yako", "table_rec": "Ushauri wa FarmIQ",
+        "table_strategy": "Mkakati", "table_outcome": "Matokeo",
         "status": {"low": "Chini", "optimal": "Vizuri", "acidic": "Asidi", "good": "Sawa"}
     }
 }
@@ -290,10 +296,30 @@ with tab_farmer:
             st.caption("🔴 Red: Current Deficiency | 🟢 Green: Recommended Target Hub")
 
             # The Switch (Comparison)
-            st.markdown("### 🔄 The Switch: Impact Analysis")
+            st.markdown(f"### 🔄 {t['switch_title']}")
             comp = result.get('comparison', {})
             current_flaw = comp.get("current_flaw", "Analysis pending")
-            st.markdown(f'<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;"><table style="width: 100%;"><tr><th>Feature</th><th>Your Habit ({comp.get("current", "")})</th><th style="color: #16a34a;">FarmIQ Recommendation</th></tr><tr><td>Strategy</td><td style="color: #ef4444; font-size:0.9rem;">{current_flaw}</td><td style="color: #16a34a; font-weight:bold;">{comp.get("recommended", "")}</td></tr><tr><td>Outcome</td><td>Variable Yield</td><td style="color: #16a34a; font-weight:bold;">{comp.get("impact", "")}</td></tr></table></div>', unsafe_allow_html=True)
+            st.markdown(f"""
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <th>{t['table_feature']}</th>
+                            <th>{t['table_habit']} ({comp.get("current", "")})</th>
+                            <th style="color: #16a34a;">{t['table_rec']}</th>
+                        </tr>
+                        <tr>
+                            <td>{t['table_strategy']}</td>
+                            <td style="color: #ef4444; font-size:0.9rem;">{current_flaw}</td>
+                            <td style="color: #16a34a; font-weight:bold;">{comp.get("recommended", "")}</td>
+                        </tr>
+                        <tr>
+                            <td>{t['table_outcome']}</td>
+                            <td>{comp.get("current_outcome", "Variable Yield")}</td>
+                            <td style="color: #16a34a; font-weight:bold;">{comp.get("impact", "")}</td>
+                        </tr>
+                    </table>
+                </div>
+            """, unsafe_allow_html=True)
 
             # Crop Calendar Timeline
             st.markdown("### 📅 3-Month Action Plan")

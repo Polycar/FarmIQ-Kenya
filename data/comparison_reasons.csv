@@ -1,0 +1,10 @@
+Condition,Reason_EN,Reason_SW
+P_Deficit_with_CAN,Lacks Phosphorus needed for strong root development.,Haina Fosforasi inayohitajika kwa ukuzaji wa mizizi.
+N_Deficit_with_DAP,Lacks sufficient Nitrogen for vegetative growth later.,Haina Nitrojeni ya kutosha kwa ukuaji wa baadaye.
+Low_Density,Nutrient density is too low for commercial yields.,Uzito wa virutubisho ni mdogo sana kwa mavuno ya kibiashara.
+NPK_Generic,Generic blend. Ratio may not match your exact soil deficit.,Mchanganyiko wa jumla. Uwiano unaweza usilingane na upungufu wako wa udongo.
+Optimal,Soil is optimal; current fertilizer is unnecessary.,Udongo uko sawa; mbolea ya sasa haihitajiki.
+Default,Generally meets requirements.,Kwa ujumla inakidhi mahitaji.
+Impact_Optimized,Optimized Recovery,Uboreshaji Uliopangwa
+Impact_Variable,Variable Yield,Mavuno Yasiyo na Uhakika
+Rec_Optimal,None required (Optimal Soil),Mbolea haihitajiki (Udongo uko Sawa)
