@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import rasterio
 import os
+from isda_api import get_precision_soil_data, is_api_configured
 
 class FarmIQRecommender:
     def __init__(self, soil_data_path):
@@ -112,15 +113,27 @@ class FarmIQRecommender:
         
         reqs = self.crop_reqs.get(crop, self.crop_reqs["Maize"])
 
-        # High-Resolution Override
+        # High-Resolution Override (3-tier fallback chain)
         data_source = "Regional Baseline (CSV)" if lang == "English" else "Msingi wa Eneo (CSV)"
         confidence = "Moderate 🟡 (Based on ~100+ historical regional samples)"
+        
         if lat and lon:
-            hi_res_ph = self.get_high_res_ph(lat, lon)
-            if hi_res_ph:
-                soil["pH"] = hi_res_ph
-                data_source = "30m Satellite Precision" if lang == "English" else "Usahihi wa Satelaiti (30m)"
-                confidence = "High 🟢 (30m spectral resolution data applied)"
+            # TIER 1: iSDAsoil API — All nutrients at 30m precision
+            if is_api_configured():
+                api_soil = get_precision_soil_data(lat, lon)
+                if api_soil:
+                    for key, val in api_soil.items():
+                        soil[key] = val
+                    data_source = "iSDAsoil API (30m Full Spectrum)" if lang == "English" else "API ya iSDAsoil (30m Kamili)"
+                    confidence = "Very High 🟢 (All nutrients at 30m via iSDAsoil API)"
+            
+            # TIER 2: Local GeoTIFF — pH only at 30m (fallback if API not configured or failed)
+            if "iSDAsoil" not in data_source:
+                hi_res_ph = self.get_high_res_ph(lat, lon)
+                if hi_res_ph:
+                    soil["pH"] = hi_res_ph
+                    data_source = "30m Satellite Precision (pH)" if lang == "English" else "Usahihi wa Satelaiti (30m pH)"
+                    confidence = "High 🟢 (pH at 30m resolution, other nutrients from regional baseline)"
 
         if overrides:
             for key in ["pH", "Total Nitrogen (mg/kg)", "Extractable Phosphorus (mg/kg)", "Extractable Potassium (mg/kg)"]:
