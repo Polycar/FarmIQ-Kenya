@@ -685,12 +685,19 @@ if is_officer:
             st.markdown("---")
             st.markdown("### 💰 Market Pricing Management")
             st.write("Update current market prices and expected yields to keep farmer ROI estimates accurate.")
+            
             if not engine.crop_econ.empty:
+                # Use columns to put the save button in a prominent place
+                btn_col1, btn_col2 = st.columns([3, 1])
+                with btn_col2:
+                    save_clicked = st.button("💾 SAVE UPDATES", use_container_width=True, type="primary")
+                
                 edited_df = st.data_editor(engine.crop_econ, use_container_width=True, hide_index=True, key="econ_editor")
-                if st.button("💾 Save Market Updates", use_container_width=True):
+                
+                if save_clicked:
                     econ_path = os.path.join(os.path.dirname(__file__), "data", "crop_economics.csv")
                     edited_df.to_csv(econ_path, index=False)
-                    st.success("Market data updated successfully!")
+                    st.success("✅ Market data updated successfully! Refreshing engine...")
                     st.rerun()
         else:
             st.info("No queries have been made yet. The dashboard will populate once farmers start using the platform.")
