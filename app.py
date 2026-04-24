@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v14():
+def load_farmiq_engine_v15():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v14()
+engine = load_farmiq_engine_v15()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -211,7 +211,10 @@ with tab_farmer:
     
     col1, col2 = st.columns(2)
     with col1: selected_crop = st.selectbox(t["crop"], list(engine.crop_reqs.keys()))
-    with col2: selected_fert = st.selectbox(t["fert"], ["DAP (Diammonium Phosphate)", "CAN", "NPK", "Urea", "Manure", "None"])
+    with col2: selected_fert = st.selectbox(t["fert"], [
+        "DAP (Diammonium Phosphate)", "CAN", "Urea", "NPK 17:17:17", 
+        "Mavuno (Planting)", "YaraMila Cereal", "SSP / TSP", "Manure", "None"
+    ])
 
     f_col1, f_col2 = st.columns(2)
     with f_col1: farm_acres = st.number_input(t["acres"], min_value=0.25, max_value=500.0, value=1.0, step=0.25)

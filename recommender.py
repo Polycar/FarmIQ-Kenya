@@ -63,8 +63,8 @@ class FarmIQRecommender:
         if not self.PRICES["Subsidized"]:
             # Fallback
             self.PRICES = {
-                "Subsidized": {"DAP": 2500, "CAN": 2500, "NPK": 2500, "Urea": 2500, "Lime": 1500, "Mavuno": 2500, "SSP": 2500, "NPK 17:17:17": 2500},
-                "Commercial": {"DAP": 6500, "CAN": 4500, "NPK": 5500, "Urea": 5500, "Lime": 1800, "Mavuno": 5800, "SSP": 5200, "NPK 17:17:17": 5600}
+                "Subsidized": {"DAP": 2500, "CAN": 2500, "NPK 17:17:17": 2500, "Urea": 2500, "Lime": 1500, "Mavuno": 2500, "SSP": 2500, "YaraMila Cereal": 3500, "SA": 2500, "TSP": 2800},
+                "Commercial": {"DAP": 6500, "CAN": 4500, "NPK 17:17:17": 5600, "Urea": 5500, "Lime": 1800, "Mavuno": 5800, "SSP": 5200, "YaraMila Cereal": 7200, "SA": 4800, "TSP": 6200}
             }
     
     def detect_county(self, lat, lon):
@@ -221,7 +221,8 @@ class FarmIQRecommender:
         if k_val < reqs["k_min"]:
             p_type = "NPK 17:17:17"
         elif ph_val < 5.5:
-            p_type = "SSP"
+            # Mavuno is a specialized blend for cereals in acidic soils
+            p_type = "Mavuno" if crop in ["Maize", "Sorghum", "Wheat"] else "SSP"
         else:
             p_type = "DAP"
 
