@@ -51,7 +51,6 @@ st.markdown("""
     .stAppDeployButton { display: none !important; }
     button[data-testid="stBaseButton-secondary"] { display: none !important; }
     div[class*="viewerBadge"] { display: none !important; }
-    [data-testid="collapsedControl"] { display: none !important; } /* Hide the sidebar toggle check */
 </style>
 """, unsafe_allow_html=True)
 
