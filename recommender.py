@@ -108,7 +108,6 @@ class FarmIQRecommender:
         for a given GPS coordinate. Returns technical keys for explicit mapping.
         """
         try:
-            # Ensure coordinates are clean floats
             lat = float(lat)
             lon = float(lon)
         except (ValueError, TypeError):
@@ -133,13 +132,14 @@ class FarmIQRecommender:
                         "lat": lat,
                         "lon": lon,
                         "property": prop,
-                        "depth": "0-20cm"
+                        "depth": "0-20"
                     },
-                    timeout=10 # Increased timeout for reliability
+                    timeout=10
                 )
                 if response.status_code == 200:
                     data = response.json()
-                    value = data.get("property", {}).get(prop, {}).get("value", {}).get("mean")
+                    # iSDA v1 returns a simpler structure: {"value": X, "unit": Y}
+                    value = data.get("value")
                     if value is not None:
                         results[prop] = float(value)
             except Exception:
