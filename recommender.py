@@ -308,7 +308,7 @@ class FarmIQRecommender:
         is_k_low = soil["Extractable Potassium (mg/kg)"] < 150
 
         return {
-            "county_data": soil, "crop": crop, "current_fert": current_fert, "advice": advice, "timeline": timeline,
+            "county_data": soil, "crop": crop, "current_fert": current_fert, "advice": advice, "timeline": timeline, "reqs": reqs,
             "budget": {"breakdown": breakdown, "total_budget": int(total_cost), "farm_size": farm_size_acres},
             "is_acidic": is_acidic, "is_n_low": is_n_low, "is_p_low": is_p_low, "is_k_low": is_k_low,
             "health_score": health_score, "data_source": data_source, "confidence": confidence,

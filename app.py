@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v13():
+def load_farmiq_engine_v14():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v13()
+engine = load_farmiq_engine_v14()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -66,6 +66,9 @@ LANGS = {
         "switch_title": "The Switch: Impact Analysis",
         "table_feature": "Feature", "table_habit": "Your Habit", "table_rec": "FarmIQ Recommendation",
         "table_strategy": "Strategy", "table_outcome": "Outcome",
+        "chart_title": "Nutrient Sufficiency Dashboard",
+        "chart_legend_curr": "Current Level", "chart_legend_target": "Target Level",
+        "nutrients": ["Nitrogen (N)", "Phosphorus (P)", "Potassium (K)"],
         "status": {"low": "Low", "optimal": "Optimal", "acidic": "Acidic", "good": "Healthy"}
     },
     "Kiswahili": {
@@ -77,6 +80,9 @@ LANGS = {
         "switch_title": "Mabadiliko: Uchambuzi wa Matokeo",
         "table_feature": "Kipengele", "table_habit": "Tabia Yako", "table_rec": "Ushauri wa FarmIQ",
         "table_strategy": "Mkakati", "table_outcome": "Matokeo",
+        "chart_title": "Dashibodi ya Kutosha kwa Virutubisho",
+        "chart_legend_curr": "Kiwango cha Sasa", "chart_legend_target": "Kiwango Lengwa",
+        "nutrients": ["Nitrojeni (N)", "Fosforasi (P)", "Potasiamu (K)"],
         "status": {"low": "Chini", "optimal": "Vizuri", "acidic": "Asidi", "good": "Sawa"}
     }
 }
@@ -279,21 +285,25 @@ with tab_farmer:
                 """)
 
             # Nutrient Impact Visualization
-            st.markdown("### 📈 Nutrient Impact Dashboard")
-            # Calculate deficiency gaps for chart
+            st.markdown(f"### 📈 {t['chart_title']}")
+            
+            # Scientific Normalization against Crop Requirements
+            reqs = result.get('reqs', {"n_min": 0.2, "p_min": 30, "k_min": 250})
             p_val = result['county_data']['Extractable Phosphorus (mg/kg)']
             n_val = result['county_data']['Total Nitrogen (mg/kg)']
             k_val = result['county_data']['Extractable Potassium (mg/kg)']
             
-            # Simple Normalized sufficiency levels for chart (0.0 to 1.0)
-            chart_data = pd.DataFrame({
-                "Nutrient": ["Phosphorus (P)", "Nitrogen (N)", "Potassium (K)"],
-                "Current Level": [min(p_val/30, 1.0), min(n_val/0.2, 1.0), min(k_val/250, 1.0)],
-                "Recommended": [1.0, 1.0, 1.0]
+            # Create a comparison dataframe
+            # We normalize everything so that '1.0' is exactly what the crop needs.
+            chart_df = pd.DataFrame({
+                "Nutrient": t["nutrients"],
+                t["chart_legend_curr"]: [n_val/reqs['n_min'], p_val/reqs['p_min'], k_val/reqs['k_min']],
+                t["chart_legend_target"]: [1.0, 1.0, 1.0]
             }).set_index("Nutrient")
             
-            st.bar_chart(chart_data, color=["#f87171", "#34d399"]) # Red (Current) vs Green (Target)
-            st.caption("🔴 Red: Current Deficiency | 🟢 Green: Recommended Target Hub")
+            # Render grouped bar chart (side-by-side is more scientific for comparison)
+            st.bar_chart(chart_df, color=["#ef4444", "#10b981"]) # Red (Current) vs Green (Target)
+            st.caption(f"📊 **Scientific Basis**: 1.0 on the scale represents the optimal {result['crop']} requirement for this nutrient.")
 
             # The Switch (Comparison)
             st.markdown(f"### 🔄 {t['switch_title']}")
