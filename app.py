@@ -397,9 +397,16 @@ with tab_yield:
         with st.form("log_yield_form"):
             colA, colB, colC = st.columns(3)
             with colA:
-                y_crop = st.selectbox("Crop", ["Maize", "Beans", "Potatoes", "Tomatoes", "Kale (Sukuma)", "Wheat", "Sorghum", "Avocado", "Tea"])
+                y_crop = st.selectbox("Crop", list(engine.crop_reqs.keys()))
             with colB:
-                y_season = st.selectbox("Season", ["Long Rains 2024", "Short Rains 2024", "Long Rains 2025", "Short Rains 2025", "Long Rains 2026", "Short Rains 2026"])
+                # Generate seasons dynamically based on current year
+                import datetime as dt
+                current_year = dt.datetime.now().year
+                seasons = []
+                for yr in range(current_year - 2, current_year + 1):
+                    seasons.append(f"Long Rains {yr}")
+                    seasons.append(f"Short Rains {yr}")
+                y_season = st.selectbox("Season", seasons)
             with colC:
                 y_amount = st.number_input("Yield (Bags / Acre)", min_value=0.0, max_value=100.0, step=0.5, value=15.0)
                 

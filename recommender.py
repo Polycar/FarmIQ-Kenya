@@ -7,36 +7,46 @@ class FarmIQRecommender:
     def __init__(self, soil_data_path):
         """Initialize with path to the county soil dataset."""
         self.soil_data = pd.read_csv(soil_data_path)
+        self.data_dir = os.path.dirname(soil_data_path)
         
-        # General crop nutrient requirements threshold
-        self.crop_reqs = {
-            "Maize": {"ph_min": 5.5, "n_min": 1.2, "p_min": 20, "k_min": 150},
-            "Beans": {"ph_min": 6.0, "n_min": 1.0, "p_min": 15, "k_min": 120},
-            "Potatoes": {"ph_min": 5.2, "n_min": 1.5, "p_min": 25, "k_min": 250},
-            "Tomatoes": {"ph_min": 6.0, "n_min": 1.5, "p_min": 25, "k_min": 250},
-            "Kale (Sukuma)": {"ph_min": 5.5, "n_min": 1.5, "p_min": 15, "k_min": 150},
-            "Wheat": {"ph_min": 6.0, "n_min": 1.3, "p_min": 18, "k_min": 160},
-            "Sorghum": {"ph_min": 5.5, "n_min": 1.0, "p_min": 12, "k_min": 130},
-            "Avocado": {"ph_min": 5.5, "n_min": 1.5, "p_min": 20, "k_min": 300},
-            "Tea": {"ph_min": 4.5, "n_min": 2.0, "p_min": 15, "k_min": 200}
-        }
+        # Load crop requirements from CSV (editable without touching code)
+        crop_req_path = os.path.join(self.data_dir, "crop_requirements.csv")
+        self.crop_reqs = {}
+        if os.path.exists(crop_req_path):
+            cr_df = pd.read_csv(crop_req_path)
+            for _, row in cr_df.iterrows():
+                self.crop_reqs[row["Crop"]] = {
+                    "ph_min": row["ph_min"], "n_min": row["n_min"],
+                    "p_min": row["p_min"], "k_min": row["k_min"]
+                }
+        if not self.crop_reqs:
+            # Fallback if CSV is missing
+            self.crop_reqs = {"Maize": {"ph_min": 5.5, "n_min": 1.2, "p_min": 20, "k_min": 150}}
+        
         self.raster_path = os.path.join(os.path.dirname(__file__), "data", "rasters", "kenya_ph.tif")
         
-        # Approximate centroids for 47 counties to enable auto-detection from GPS
-        self.COUNTY_CENTROIDS = {
-            "Baringo": [0.48, 35.58], "Bomet": [-0.78, 35.35], "Bungoma": [0.57, 34.56], "Busia": [0.46, 34.11],
-            "Elgeyo-Marakwet": [0.81, 35.50], "Embu": [-0.54, 37.45], "Garissa": [-0.45, 39.64], "Homa Bay": [-0.53, 34.45],
-            "Isiolo": [0.35, 37.58], "Kajiado": [-2.09, 36.78], "Kakamega": [0.28, 34.75], "Kericho": [-0.37, 35.28],
-            "Kiambu": [-1.17, 36.83], "Kilifi": [-3.51, 39.91], "Kirinyaga": [-0.66, 37.31], "Kisii": [-0.68, 34.78],
-            "Kisumu": [-0.10, 34.75], "Kitui": [-1.37, 38.01], "Kwale": [-4.17, 39.45], "Laikipia": [0.36, 37.07],
-            "Lamu": [-2.27, 40.90], "Machakos": [-1.52, 37.26], "Makueni": [-1.79, 37.62], "Mandera": [3.94, 41.86],
-            "Marsabit": [2.33, 37.99], "Meru": [0.05, 37.65], "Migori": [-1.06, 34.47],
-            "Mombasa": [-4.05, 39.67], "Murang'a": [-0.72, 37.15], "Nairobi": [-1.29, 36.82], "Nakuru": [-0.30, 36.06],
-            "Nandi": [0.18, 35.12], "Narok": [-1.08, 35.87], "Nyamira": [-0.58, 34.93], "Nyandarua": [-0.33, 36.42],
-            "Nyeri": [-0.42, 36.95], "Samburu": [1.21, 36.76], "Siaya": [0.06, 34.29], "Taita-Taveta": [-3.31, 38.48],
-            "Tana River": [-1.51, 39.15], "Tharaka-Nithi": [-0.30, 37.95], "Trans Nzoia": [1.02, 34.95], "Turkana": [3.11, 35.60],
-            "Uasin Gishu": [0.52, 35.27], "Vihiga": [0.01, 34.72], "Wajir": [1.75, 40.06], "West Pokot": [1.53, 35.11]
-        }
+        # Load county centroids from CSV (editable without touching code)
+        coords_path = os.path.join(self.data_dir, "county_coordinates.csv")
+        self.COUNTY_CENTROIDS = {}
+        if os.path.exists(coords_path):
+            cc_df = pd.read_csv(coords_path)
+            for _, row in cc_df.iterrows():
+                self.COUNTY_CENTROIDS[row["County"]] = [row["Latitude"], row["Longitude"]]
+        
+        # Load prices from CSV (editable without touching code)
+        prices_path = os.path.join(self.data_dir, "prices.csv")
+        self.PRICES = {"Subsidized": {}, "Commercial": {}}
+        if os.path.exists(prices_path):
+            pr_df = pd.read_csv(prices_path)
+            for _, row in pr_df.iterrows():
+                self.PRICES["Subsidized"][row["Fertilizer"]] = int(row["Subsidized"])
+                self.PRICES["Commercial"][row["Fertilizer"]] = int(row["Commercial"])
+        if not self.PRICES["Subsidized"]:
+            # Fallback
+            self.PRICES = {
+                "Subsidized": {"DAP": 2500, "CAN": 2500, "NPK": 2500, "Urea": 2500, "Lime": 1500, "Mavuno": 2500},
+                "Commercial": {"DAP": 6500, "CAN": 4500, "NPK": 5500, "Urea": 5500, "Lime": 1800, "Mavuno": 5800}
+            }
     
     def detect_county(self, lat, lon):
         """Finds the nearest county centroid for a given lat/lon."""
@@ -120,12 +130,7 @@ class FarmIQRecommender:
             confidence = "Maximum 🔵 (Ground truth lab data)"
 
         # --- SCIENTIFIC LOGIC: NUTRIENT GAP CALCULATION ---
-        # Baseline Prices (2026 Est. KES per 50kg bag)
-        PRICES = {
-            "Subsidized": {"DAP": 2500, "CAN": 2500, "NPK": 2500, "Urea": 2500, "Lime": 1500, "Mavuno": 2500},
-            "Commercial": {"DAP": 6500, "CAN": 4500, "NPK": 5500, "Urea": 5500, "Lime": 1800, "Mavuno": 5800}
-        }
-        mp = PRICES.get(price_mode, PRICES["Subsidized"])
+        mp = self.PRICES.get(price_mode, self.PRICES["Subsidized"])
 
         advice = []
         breakdown = []
