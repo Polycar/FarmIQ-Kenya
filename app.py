@@ -6,7 +6,7 @@ import pandas as pd
 from recommender import FarmIQRecommender
 from report_gen import generate_report_pdf
 from dealers import get_dealers_by_county
-from database import save_recommendation, get_all_records, get_stats
+from database import save_recommendation, get_all_records, get_stats, log_yield, get_farmer_yields
 from streamlit_geolocation import streamlit_geolocation
 from weather import get_weather_context, get_county_coordinates
 
@@ -86,10 +86,11 @@ with st.sidebar:
     access_code = st.text_input("Officer Access Code", type="password")
     is_officer = (access_code == "OFFICER2026")
 
+# Main Navigation
 if is_officer:
-    tab_farmer, tab_officer = st.tabs(["🌱 Farmer Advice", "📊 Extension Dashboard"])
+    tab_farmer, tab_yield, tab_officer = st.tabs(["🌾 Get Advice", "📈 Track Yield", "🏢 Dashboard"])
 else:
-    tab_farmer = st.container()
+    tab_farmer, tab_yield = st.tabs(["🌾 Get Advice", "📈 Track Yield"])
 
 with tab_farmer:
     st.markdown(f'<div class="hero-card"><h1>🌱 FarmIQ</h1><p>National Precision Agriculture Platform</p></div>', unsafe_allow_html=True)
@@ -382,6 +383,61 @@ with tab_farmer:
             # Attribution Footer
             st.divider()
             st.markdown('<div style="text-align: center; color: #64748b; font-size: 0.8rem;">📊 Data Source: iSDAsoil (2021) 30m Map | 🧪 Scientific Basis: Kenyan Agronomic Baselines</div>', unsafe_allow_html=True)
+
+# --- YIELD TRACKING TAB ---
+with tab_yield:
+    st.markdown("## 📈 Season-over-Season Yield Tracking")
+    st.markdown("Log your actual harvest to see how FarmIQ recommendations are improving your yield over time.")
+    
+    st.markdown("### 1. Identify Your Farm")
+    farmer_id = st.text_input("Enter Farm Name or Mobile Number (e.g. 0712345678)")
+    
+    if farmer_id:
+        st.markdown("### 2. Log New Harvest")
+        with st.form("log_yield_form"):
+            colA, colB, colC = st.columns(3)
+            with colA:
+                y_crop = st.selectbox("Crop", ["Maize", "Beans", "Potatoes", "Tomatoes", "Kale (Sukuma)", "Wheat", "Sorghum", "Avocado", "Tea"])
+            with colB:
+                y_season = st.selectbox("Season", ["Long Rains 2024", "Short Rains 2024", "Long Rains 2025", "Short Rains 2025", "Long Rains 2026", "Short Rains 2026"])
+            with colC:
+                y_amount = st.number_input("Yield (Bags / Acre)", min_value=0.0, max_value=100.0, step=0.5, value=15.0)
+                
+            submitted = st.form_submit_button("💾 Save Harvest Data", use_container_width=True)
+            if submitted:
+                log_yield(farmer_id, y_crop, y_season, y_amount)
+                st.success("Harvest logged successfully! 🌾")
+        
+        st.markdown("### 3. Your Yield Growth")
+        records = get_farmer_yields(farmer_id)
+        if records:
+            import pandas as pd
+            df_yields = pd.DataFrame([{
+                "Season": r.season,
+                "Crop": r.crop,
+                "Bags per Acre": r.yield_bags_per_acre
+            } for r in records])
+            
+            # Pivot if they have multiple crops, or just plot if one
+            crops_logged = df_yields["Crop"].unique()
+            for crop in crops_logged:
+                st.markdown(f"#### 🌽 {crop} Yield History")
+                crop_df = df_yields[df_yields["Crop"] == crop]
+                # Bar chart
+                st.bar_chart(data=crop_df, x="Season", y="Bags per Acre", color="#16a34a", height=300)
+                
+                # Show percentage growth if multiple seasons
+                if len(crop_df) > 1:
+                    first_yield = crop_df.iloc[0]["Bags per Acre"]
+                    last_yield = crop_df.iloc[-1]["Bags per Acre"]
+                    if first_yield > 0:
+                        growth = ((last_yield - first_yield) / first_yield) * 100
+                        if growth > 0:
+                            st.success(f"🚀 **Awesome!** Your {crop} yield has increased by **{growth:.1f}%** since you started tracking!")
+                        elif growth < 0:
+                            st.warning(f"📉 Your {crop} yield decreased by **{abs(growth):.1f}%**. Make sure to follow the precise fertilizer timelines.")
+        else:
+            st.info("No harvest data found for this Farm ID. Log your first harvest above!")
 
 # Extension Dashboard
 if is_officer:

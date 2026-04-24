@@ -29,6 +29,16 @@ class RecommendationRecord(Base):
     recommended_fert = Column(String)
     lang = Column(String)
 
+class YieldRecord(Base):
+    __tablename__ = "yields"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    farmer_id = Column(String, index=True)  # Phone number or Farm Name
+    crop = Column(String)
+    season = Column(String)
+    yield_bags_per_acre = Column(Float)
+    timestamp = Column(DateTime, default=datetime.datetime.now)
+
 # Create tables
 Base.metadata.create_all(bind=engine)
 
@@ -95,5 +105,30 @@ def get_stats():
             "county_distribution": dict(county_trends),
             "crop_distribution": dict(crop_trends)
         }
+    finally:
+        db.close()
+
+def log_yield(farmer_id, crop, season, yield_bags_per_acre):
+    """Logs a farmer's harvest yield."""
+    db = SessionLocal()
+    try:
+        record = YieldRecord(
+            farmer_id=farmer_id,
+            crop=crop,
+            season=season,
+            yield_bags_per_acre=yield_bags_per_acre
+        )
+        db.add(record)
+        db.commit()
+    except Exception:
+        pass
+    finally:
+        db.close()
+
+def get_farmer_yields(farmer_id):
+    """Retrieves all historical yield records for a specific farmer."""
+    db = SessionLocal()
+    try:
+        return db.query(YieldRecord).filter(YieldRecord.farmer_id == farmer_id).order_by(YieldRecord.timestamp.asc()).all()
     finally:
         db.close()
