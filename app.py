@@ -697,7 +697,9 @@ if is_officer:
                 if save_clicked:
                     econ_path = os.path.join(os.path.dirname(__file__), "data", "crop_economics.csv")
                     edited_df.to_csv(econ_path, index=False)
-                    st.success("✅ Market data updated successfully! Refreshing engine...")
+                    # Manually update the engine's memory so it doesn't use the old cached data
+                    engine.crop_econ = edited_df
+                    st.success("✅ Market data updated successfully! Values refreshed.")
                     st.rerun()
         else:
             st.info("No queries have been made yet. The dashboard will populate once farmers start using the platform.")
