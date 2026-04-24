@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v25():
+def load_farmiq_engine_v26():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v25()
+engine = load_farmiq_engine_v26()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -291,9 +291,9 @@ with tab_farmer:
             st.markdown(f"### 📈 {t['chart_title']}")
             
             # Scientific Normalization against Crop Requirements
-            reqs = result.get('reqs', {"n_min": 0.2, "p_min": 30, "k_min": 250})
+            reqs = result.get('reqs', {"n_min": 1.2, "p_min": 20, "k_min": 150})
             p_val = result['county_data']['Extractable Phosphorus (mg/kg)']
-            n_val = result['county_data']['Total Nitrogen (mg/kg)']
+            n_val = result['county_data']['Total Nitrogen (g/kg)']
             k_val = result['county_data']['Extractable Potassium (mg/kg)']
             
             # Create a comparison dataframe
