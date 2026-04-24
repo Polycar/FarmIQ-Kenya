@@ -63,8 +63,8 @@ class FarmIQRecommender:
         if not self.PRICES["Subsidized"]:
             # Fallback
             self.PRICES = {
-                "Subsidized": {"DAP": 2500, "CAN": 2500, "NPK 17:17:17": 2500, "Urea": 2500, "Lime": 1500, "Mavuno": 2500, "SSP": 2500, "YaraMila Cereal": 3500, "SA": 2500, "TSP": 2800},
-                "Commercial": {"DAP": 6500, "CAN": 4500, "NPK 17:17:17": 5600, "Urea": 5500, "Lime": 1800, "Mavuno": 5800, "SSP": 5200, "YaraMila Cereal": 7200, "SA": 4800, "TSP": 6200}
+                "Subsidized": {"DAP": 2500, "CAN": 2500, "NPK 17:17:17": 2500, "Urea": 2500, "Lime": 1500, "Mavuno": 2500, "SSP": 2500, "YaraMila Cereal": 3500, "SA": 2500, "TSP": 2800, "Foliar Feed (1L)": 1000},
+                "Commercial": {"DAP": 6500, "CAN": 4500, "NPK 17:17:17": 5600, "Urea": 5500, "Lime": 1800, "Mavuno": 5800, "SSP": 5200, "YaraMila Cereal": 7200, "SA": 4800, "TSP": 6200, "Foliar Feed (1L)": 1400}
             }
     
     def detect_county(self, lat, lon):
@@ -343,6 +343,14 @@ class FarmIQRecommender:
             qty = n_bags * farm_size_acres
             breakdown.append(f"Stage 2 (Top Dress): {qty:.1f} x bags {n_type}")
             total_cost += qty * mp.get(n_type, 2500)
+
+        # 6. Foliar Feed (Micronutrients for high-value crops)
+        if crop in ["Tomatoes", "Avocado", "Potatoes", "Kale (Sukuma)"]:
+            foliar_qty = 1.0 * farm_size_acres
+            breakdown.append(f"Foliar Feed: {foliar_qty:.1f} x Liters")
+            total_cost += foliar_qty * mp.get("Foliar Feed (1L)", 1400)
+            if lang == "English": advice.append(f"🍃 **Foliar Tip**: Apply Foliar Feed during flowering/fruiting for maximum quality.")
+            else: advice.append(f"🍃 **Kidokezo**: Tumia mbolea ya majani wakati wa kutoa maua/matunda.")
 
         health_score = self.calculate_health_score(soil, reqs)
             
