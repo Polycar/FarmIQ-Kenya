@@ -23,14 +23,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
 @st.cache_resource
-def load_farmiq_engine_v8():
+def load_farmiq_engine_v9():
     try:
         return FarmIQRecommender(DATA_PATH)
     except FileNotFoundError:
         st.error(f"Soil database not found at {DATA_PATH}.")
         st.stop()
 
-engine = load_farmiq_engine_v8()
+engine = load_farmiq_engine_v9()
 
 # --- Custom Styling for Premium Look ---
 st.markdown("""
@@ -84,7 +84,8 @@ t = LANGS[lang_choice]
 with st.sidebar:
     st.markdown("### 🏛️ B2B Access")
     access_code = st.text_input("Officer Access Code", type="password")
-    is_officer = (access_code == "OFFICER2026")
+    officer_pw = st.secrets.get("OFFICER_PASSWORD", "OFFICER2026")
+    is_officer = (access_code == officer_pw)
 
 # Main Navigation
 if is_officer:
