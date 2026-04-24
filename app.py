@@ -578,8 +578,11 @@ if is_officer:
             st.dataframe(df, use_container_width=True)
             csv = df.to_csv(index=False).encode('utf-8')
             st.download_button(
-                "📥 Export Full Activity Log (CSV)", 
-                csv, "farmiq_analytics.csv", 
-                "text/csv", 
+                label="📥 Download Data CSV" if lang_choice == "English" else "📥 Pakua Data CSV",
+                data=csv,
+                file_name="farmiq_dashboard.csv",
+                mime="text/csv",
                 use_container_width=True
             )
+        else:
+            st.info("No queries have been made yet. The dashboard will populate once farmers start using the platform.")
