@@ -589,7 +589,10 @@ class FarmIQRecommender:
             
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+            try:
+                model = genai.GenerativeModel('gemini-1.5-flash')
+            except:
+                model = genai.GenerativeModel('gemini-pro')
             
             # Construct a high-context prompt
             county = result.get("county_data", {}).get("County", "Unknown")
