@@ -115,6 +115,11 @@ with tab_farmer:
     with col_mode2:
         lab_mode = st.toggle("🧪 Add My Soil Test Results (Optional)", help="Enable if you have a recent laboratory report.")
 
+    if "prev_loc_mode" in st.session_state and st.session_state.prev_loc_mode != loc_mode:
+        st.session_state.lat = None
+        st.session_state.lon = None
+    st.session_state.prev_loc_mode = loc_mode
+
     lat = st.session_state.get("lat")
     lon = st.session_state.get("lon")
     selected_county = None
@@ -164,6 +169,8 @@ with tab_farmer:
                 with g_col1: lat = st.number_input("Latitude", value=0.0, format="%.4f")
                 with g_col2: lon = st.number_input("Longitude", value=0.0, format="%.4f")
                 if lat != 0.0 or lon != 0.0:
+                    st.session_state.lat = lat
+                    st.session_state.lon = lon
                     selected_county = engine.detect_county(lat, lon)
                     st.caption(f"🌍 Detected: **{selected_county} County**")
     else:
@@ -190,6 +197,8 @@ with tab_farmer:
                     row = county_sc[county_sc["SubCounty"] == selected_subcounty].iloc[0]
                     lat = float(row["Latitude"])
                     lon = float(row["Longitude"])
+                    st.session_state.lat = lat
+                    st.session_state.lon = lon
                     st.success(f"🎯 Sub-County API Locked: {selected_subcounty} ({lat}, {lon})")
 
         if selected_county == "Select County...":
@@ -243,8 +252,6 @@ with tab_farmer:
                 )
                 st.session_state.result = result
                 st.session_state.last_county = selected_county
-                st.session_state.saved_lat = lat
-                st.session_state.saved_lon = lon
                 
                 # Save to DB exactly once when generated
                 save_status = save_recommendation(result, farm_acres, lang_choice)
@@ -445,12 +452,12 @@ with tab_farmer:
             with st.expander(f"📍 {t['dealers_title']}"):
                 import urllib.parse
                 
-                saved_lat = st.session_state.get('saved_lat')
-                saved_lon = st.session_state.get('saved_lon')
+                current_lat = st.session_state.get('lat')
+                current_lon = st.session_state.get('lon')
                 
                 # Dynamic GPS-based local search if coordinates exist
-                if saved_lat and saved_lon and saved_lat != 0.0 and saved_lon != 0.0:
-                    gps_search = f"https://www.google.com/maps/search/Agrovet+Fertilizer/@{saved_lat},{saved_lon},14z"
+                if current_lat and current_lon and current_lat != 0.0 and current_lon != 0.0:
+                    gps_search = f"https://www.google.com/maps/search/Agrovet+Fertilizer/@{current_lat},{current_lon},14z"
                     st.markdown(f'<a href="{gps_search}" target="_blank" style="text-decoration: none;"><div style="background-color: #16a34a; color: white; padding: 0.6rem 1rem; border-radius: 8px; text-align: center; font-size: 0.9rem; font-weight: bold; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">🌍 Search All Agrovets Near My Location</div></a>', unsafe_allow_html=True)
                 
                 for d in dealers:
@@ -459,11 +466,11 @@ with tab_farmer:
                         # Providing a map link for them gives wrong directions, so we just list them.
                         st.markdown(f"**{d['name']}** (Available at {selected_county} County Depot)")
                     else:
-                        # Specific local dealers: Provide a simple, reliable Google Maps search
+                        # Specific local dealers: Provide a reliable Google Maps Directions link
                         st.markdown(f"**{d['name']}** ({d['town']})")
                         search_query = f"{d['name']} {d['town']} Kenya"
-                        maps_url = f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote_plus(search_query)}"
-                        st.markdown(f'<a href="{maps_url}" target="_blank" style="text-decoration: none;"><div style="background-color: #007bff; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 1rem;">📍 Search on Map</div></a>', unsafe_allow_html=True)
+                        maps_url = f"https://www.google.com/maps/dir/?api=1&destination={urllib.parse.quote_plus(search_query)}"
+                        st.markdown(f'<a href="{maps_url}" target="_blank" style="text-decoration: none;"><div style="background-color: #007bff; color: white; padding: 0.4rem 1rem; border-radius: 5px; text-align: center; font-size: 0.8rem; font-weight: bold; width: fit-content; margin-bottom: 1rem;">🚗 Get Directions</div></a>', unsafe_allow_html=True)
             
             # --- Action Buttons: WhatsApp & PDF & SMS ---
             st.write("")
