@@ -721,20 +721,16 @@ YOUR ROLE:
             st.session_state.agro_context_key = context_key
             st.session_state.agro_messages    = []
 
-            # Auto-generate opening message
-            try:
-                seed = [{"role": "user", "content": "Please greet me and summarise my soil results and the recommended action in plain language."}]
-                intro = call_gemini(system_prompt, seed, api_key=ai_key, max_tokens=350)
-            except Exception:
-                intro = (
-                    f"Habari! I'm Mama Ardhi, your FarmIQ agronomist. Your soil in {county} scored **{score}/100**. "
-                    f"The main recommendation is **{rec}**. Ask me anything about your results."
-                    if lang_choice == "English" else
-                    f"Habari! Mimi ni Mama Ardhi. Udongo wako {county} umepata alama **{score}/100**. "
-                    f"Pendekezo kuu ni **{rec}**. Niulize chochote."
-                )
+            # Use a fast, token-saving static greeting
+            intro = (
+                f"Habari! I'm Mama Ardhi, your FarmIQ agronomist. Your soil in {county} scored **{score}/100**. "
+                f"The main recommendation is **{rec}**. Ask me anything about your results!"
+                if lang_choice == "English" else
+                f"Habari! Mimi ni Mama Ardhi. Udongo wako {county} umepata alama **{score}/100**. "
+                f"Pendekezo kuu ni **{rec}**. Niulize chochote kuhusu mavuno yako!"
+            )
             st.session_state.agro_messages = [
-                {"role": "user",  "content": "Please greet me and summarise my soil results and the recommended action in plain language."},
+                {"role": "user",  "content": "Greeting"},
                 {"role": "model", "content": intro},
             ]
 
