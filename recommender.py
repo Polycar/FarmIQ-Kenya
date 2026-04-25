@@ -6,7 +6,7 @@ import datetime
 import google.generativeai as genai
 import streamlit as st
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=3600, show_spinner=False)
 def _fetch_isda_data(lat, lon, token):
     properties = [
         "nitrogen_total",
