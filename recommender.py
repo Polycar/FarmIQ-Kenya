@@ -4,6 +4,58 @@ import os
 import requests
 import datetime
 import google.generativeai as genai
+import streamlit as st
+
+@st.cache_data(ttl=3600)
+def _fetch_isda_data(lat, lon, token):
+    properties = [
+        "nitrogen_total",
+        "phosphorus_extractable",
+        "potassium_extractable",
+        "ph",
+        "organic_carbon",
+        "aluminium_extractable",
+        "zinc_extractable",
+        "texture_class"
+    ]
+
+    base_url = "https://api.isda-africa.com/isdasoil/v2/soilproperty"
+    headers = {"Authorization": f"Bearer {token}"}
+    results = {}
+
+    for prop in properties:
+        try:
+            response = requests.get(
+                base_url,
+                headers=headers,
+                params={
+                    "lat": lat,
+                    "lon": lon,
+                    "property": prop,
+                    "depth": "0-20"
+                },
+                timeout=10
+            )
+            if response.status_code == 200:
+                data = response.json()
+                prop_data = data.get("property", {}).get(prop, [])
+                if prop_data and len(prop_data) > 0:
+                    value = prop_data[0].get("value", {}).get("value")
+                    if value is not None:
+                        results[prop] = value if isinstance(value, str) else float(value)
+                    
+                    # Extract uncertainty (90% confidence)
+                    uncertainty = prop_data[0].get("uncertainty")
+                    if uncertainty and isinstance(uncertainty, list):
+                        for uc in uncertainty:
+                            if uc.get("confidence_interval") == "90%":
+                                results[f"{prop}_lower"] = uc.get("lower_bound")
+                                results[f"{prop}_upper"] = uc.get("upper_bound")
+        except Exception:
+            continue
+
+    return results if results else None
+
 
 class FarmIQRecommender:
     def __init__(self, soil_data_path):
@@ -87,24 +139,6 @@ class FarmIQRecommender:
                 min_dist = dist
                 best_county = c
         return best_county if min_dist < 1.0 else "Unknown"
-
-    def get_high_res_ph(self, lat, lon):
-        """Samples the local 30m iSDAsoil GeoTIFF for high-precision pH."""
-        if not os.path.exists(self.raster_path):
-            return None
-        try:
-            with rasterio.open(self.raster_path) as src:
-                for val in src.sample([(lon, lat)]):
-                    pixel_val = val[0]
-                    # iSDAsoil NoData is 255. Valid pH is usually 3.0-9.5 (30-95 in deci-pH).
-                    if pixel_val > 0 and pixel_val < 200:
-                        return pixel_val / 10.0
-                    return None
-        except Exception:
-            return None
-        except Exception:
-            return None
-        return None
     
     def get_county_data(self, county_name):
         data = self.soil_data[self.soil_data["County"] == county_name]
@@ -153,53 +187,7 @@ class FarmIQRecommender:
         if not token:
             return None
 
-        properties = [
-            "nitrogen_total",
-            "phosphorus_extractable",
-            "potassium_extractable",
-            "ph",
-            "organic_carbon",
-            "aluminium_extractable",
-            "zinc_extractable",
-            "texture_class"
-        ]
-
-        base_url = "https://api.isda-africa.com/isdasoil/v2/soilproperty"
-        headers = {"Authorization": f"Bearer {token}"}
-        results = {}
-
-        for prop in properties:
-            try:
-                response = requests.get(
-                    base_url,
-                    headers=headers,
-                    params={
-                        "lat": lat,
-                        "lon": lon,
-                        "property": prop,
-                        "depth": "0-20"
-                    },
-                    timeout=10
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    prop_data = data.get("property", {}).get(prop, [])
-                    if prop_data and len(prop_data) > 0:
-                        value = prop_data[0].get("value", {}).get("value")
-                        if value is not None:
-                            results[prop] = value if isinstance(value, str) else float(value)
-                        
-                        # Extract uncertainty (90% confidence)
-                        uncertainty = prop_data[0].get("uncertainty")
-                        if uncertainty and isinstance(uncertainty, list):
-                            for uc in uncertainty:
-                                if uc.get("confidence_interval") == "90%":
-                                    results[f"{prop}_lower"] = uc.get("lower_bound")
-                                    results[f"{prop}_upper"] = uc.get("upper_bound")
-            except Exception:
-                continue
-
-        return results if results else None
+        return _fetch_isda_data(lat, lon, token)
 
     def calculate_health_score(self, soil, reqs):
         """Calculates a scientifically realistic soil quality index (SQI)."""
@@ -261,14 +249,6 @@ class FarmIQRecommender:
                 data_source = "iSDAsoil API (30m Full Spectrum)" if lang == "English" else "API ya iSDAsoil (30m Kamili)"
                 confidence = "Very High 🟢 (All nutrients at 30m via iSDAsoil API)"
             
-            # TIER 2: Local GeoTIFF — pH only at 30m (fallback if API failed)
-            if "iSDAsoil" not in data_source:
-                hi_res_ph = self.get_high_res_ph(lat, lon)
-                if hi_res_ph:
-                    soil["pH"] = hi_res_ph
-                    data_source = "30m Satellite Precision (pH)" if lang == "English" else "Usahihi wa Satelaiti (30m pH)"
-                    confidence = "High 🟢 (pH at 30m resolution, other nutrients from regional baseline)"
-
         if overrides:
             for key in ["pH", "Total Nitrogen (g/kg)", "Extractable Phosphorus (mg/kg)", "Extractable Potassium (mg/kg)"]:
                 if key in overrides and overrides[key] is not None:
@@ -433,7 +413,10 @@ class FarmIQRecommender:
             qty = p_bags * farm_size_acres
             breakdown.append(f"Stage 1 (Basal): {qty:.2f} x bags {p_type}")
             total_cost += qty * mp.get(p_type, 0)
+            if lang == "English": advice.append(f"⚠️ **Phosphorus Deficiency**: P is low ({p_val:.1f} mg/kg). Apply {qty:.1f} bags {p_type} as basal fertilizer.")
+            else: advice.append(f"⚠️ **Upungufu wa Fosforasi**: P iko chini ({p_val:.1f} mg/kg). Tumia mifuko {qty:.1f} za {p_type} kwa ajili ya kupanda.")
         else:
+
             p_bags = 0
             if lang == "English": advice.append(f"✅ **Phosphorus**: Sufficient ({p_val:.1f} mg/kg). No basal P required.")
             else: advice.append(f"✅ **Fosforasi**: Inatosha ({p_val:.1f} mg/kg). Hakuna mbolea ya P inayohitajika.")
@@ -480,7 +463,11 @@ class FarmIQRecommender:
             qty = n_bags * farm_size_acres
             breakdown.append(f"Stage 2 (Top Dress): {qty:.2f} x bags {n_type}")
             total_cost += qty * mp.get(n_type, 0)
+            if td_rule.empty:
+                if lang == "English": advice.append(f"🚀 **Stage 2 (Top Dress)**: Apply {qty:.1f} bags {n_type} at the vegetative stage.")
+                else: advice.append(f"🚀 **Hatua ya 2 (Kukuzia)**: Tumia mifuko {qty:.1f} za {n_type} wakati wa ukuaji.")
         elif td_rule.empty:
+
             n_bags = 0
             if lang == "English": advice.append(f"✅ **Nitrogen**: Sufficient ({n_display}). No top dress required.")
             else: advice.append(f"✅ **Nitrojeni**: Inatosha ({n_val:.2f} g/kg). Hakuna mbolea ya kukuzia inayohitajika.")

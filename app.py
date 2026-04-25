@@ -131,6 +131,7 @@ with st.sidebar:
     ai_key = ai_input or st.session_state.get("main_ai") or st.secrets.get("GEMINI_API_KEY")
 
 
+
 # Main Navigation
 if is_officer:
     tab_farmer, tab_yield, tab_officer = st.tabs(["🌾 Get Advice", "📈 Track Yield", "🏢 Dashboard"])
@@ -139,6 +140,64 @@ else:
 
 with tab_farmer:
     st.markdown(f'<div class="hero-card"><h1>🌱 FarmIQ</h1><p>National Precision Agriculture Platform</p></div>', unsafe_allow_html=True)
+
+    # --- MAMA ARDHI CHATBOT ---
+    with st.expander(f"{t['chat_tab']}", expanded=False):
+        st.markdown(f"### {t['chat_tab']}")
+        st.markdown("Get expert agronomic troubleshooting directly from your localized digital agent.")
+
+        if "result" not in st.session_state:
+            st.info(t["no_result"])
+        else:
+            result = st.session_state.result
+            
+            if "chat_messages" not in st.session_state:
+                st.session_state.chat_messages = []
+                
+            if st.button(t["chat_reset"]):
+                st.session_state.chat_messages = []
+                st.rerun()
+                
+            for message in st.session_state.chat_messages:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+                    
+            if prompt := st.chat_input(t["chat_placeholder"]):
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+                st.session_state.chat_messages.append({"role": "user", "content": prompt})
+                
+                if not ai_key:
+                    with st.chat_message("assistant"):
+                        st.error("⚠️ Gemini API Key is missing. Please provide your key in the sidebar settings.")
+                else:
+                    with st.spinner(t["chat_thinking"]):
+                        try:
+                            system_prompt = f"""
+                            You are Mama Ardhi, an empathetic, highly knowledgeable Swahili/English AI Agronomist.
+                            You provide advice to smallholder farmers in Kenya.
+                            
+                            Context for the current farm:
+                            - County: {result.get('county_data', {}).get('County', 'Unknown')}
+                            - Crop: {result.get('crop', 'Unknown')}
+                            - Farm Size: {result.get('budget', {}).get('farm_size', 1)} Acres
+                            - Soil Data: {result.get('county_data', {})}
+                            
+                            Be supportive, practical, and focus on actionable organic and precision agriculture suggestions tailored to their soil.
+                            """
+                            
+                            response = call_gemini(
+                                system_prompt=system_prompt,
+                                messages=st.session_state.chat_messages,
+                                api_key=ai_key
+                            )
+                            
+                            with st.chat_message("assistant"):
+                                st.markdown(response)
+                            st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                        except Exception as e:
+                            with st.chat_message("assistant"):
+                                st.error(f"API Error: {str(e)}")
     st.markdown(f"### 📍 {t['title']}")
 
     # --- PHASE 21: NATIONAL NEUTRALITY UI ---
@@ -311,7 +370,8 @@ with tab_farmer:
                 st.markdown(f"## 📊 {t['report_title']}")
                 soil = result["county_data"]
                 # Display Data Source for Transparency
-                ds_color = "#16a34a" if "Satellite" in result["data_source"] or "Satelaiti" in result["data_source"] else "#64748b"
+                ds_color = "#16a34a" if any(kw in result["data_source"] for kw in ["Satellite", "Satelaiti", "iSDAsoil", "API"]) else "#64748b"
+
                 st.markdown(f"""
                 <div style="background-color: {ds_color}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; width: fit-content; margin-bottom: 5px;">
                     🧬 Source: {result['data_source']}
@@ -609,7 +669,7 @@ with tab_farmer:
 
 
 
-# --- YIELD TRACKING TAB ---
+
 with tab_yield:
     st.markdown("## 📈 Season-over-Season Yield Tracking")
     st.markdown("Log your actual harvest to see how FarmIQ recommendations are improving your yield over time.")
