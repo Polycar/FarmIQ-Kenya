@@ -595,13 +595,49 @@ class FarmIQRecommender:
         is_p_low = p_val < reqs["p_min"]
         is_k_low = k_val < reqs["k_min"]
 
+        # 10. Match officially certified seeds
+        seeds = self.get_seed_recommendations(crop, soil.get("Agroecological Zone", "Medium"), lang=lang)
+
         return {
             "county_data": soil, "crop": crop, "current_fert": current_fert, "advice": advice, "timeline": timeline, "reqs": reqs,
             "budget": {"breakdown": breakdown, "total_budget": int(total_cost), "farm_size": farm_size_acres},
             "is_acidic": is_acidic, "is_n_low": is_n_low, "is_p_low": is_p_low, "is_k_low": is_k_low,
             "health_score": health_score, "data_source": data_source, "confidence": confidence,
-            "comparison": {"current": current_fert, "recommended": comp_rec, "current_flaw": reason, "impact": impact_rec, "current_outcome": impact_cur}
+            "comparison": {"current": current_fert, "recommended": comp_rec, "current_flaw": reason, "impact": impact_rec, "current_outcome": impact_cur},
+            "seeds": seeds
         }
+
+    def get_seed_recommendations(self, crop, agro_zone, lang="English"):
+        """
+        Retrieves official certified seed varieties from KALRO/Kenya Seed databases.
+        """
+        seeds_path = os.path.join(self.data_dir, "seeds.csv")
+        if not os.path.exists(seeds_path):
+            return []
+            
+        try:
+            df = pd.read_csv(seeds_path)
+            # Map complicated agroecological zones to target Altitude definitions
+            zone_str = str(agro_zone).lower()
+            if any(x in zone_str for x in ["highland", "tea"]):
+                mapped_altitude = "Highland"
+            elif any(x in zone_str for x in ["dryland", "semi-arid", "coastal", "savannah", "lowland"]):
+                mapped_altitude = "Dryland"
+            else:
+                mapped_altitude = "Medium"
+                
+            # Filter
+            filtered = df[(df["Crop"].str.lower() == crop.lower())]
+            
+            # Try precise altitude match first
+            zone_match = filtered[filtered["Altitude_Zone"].str.lower().str.contains(mapped_altitude.lower())]
+            if not zone_match.empty:
+                return zone_match.to_dict('records')
+            
+            # Fallback to overall crop matches
+            return filtered.to_dict('records') if not filtered.empty else []
+        except Exception:
+            return []
 
     def generate_sms_summary(self, result, lang="English"):
         if lang == "English":

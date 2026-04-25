@@ -427,6 +427,17 @@ with tab_farmer:
             else:
                 st.info("Calendar data not currently available for this crop.")
 
+            # 11. Seed Variety Selection (KALRO/KARI Certified)
+            if "seeds" in result and result["seeds"]:
+                st.markdown(f"### 🧬 {('Certified Seed Varieties' if lang_choice == 'English' else 'Mbegu Zilizoidhinishwa')}")
+                st.caption("Officially vetted recommendations from **KALRO** and the **Kenya Seed Company**.")
+                for sd in result["seeds"]:
+                    with st.expander(f"🏷️ **{sd['Variety']}** ({sd['Breeder']})"):
+                        st.markdown(f"**Altitude Suitability:** {sd['Altitude_Zone']}")
+                        st.markdown(f"**Maturity:** {sd['Maturity_Days']} Days")
+                        st.markdown(f"**Est. Yield per Acre:** {sd['Yield_Bags_Per_Acre']} Bags")
+                        st.info(f"ℹ️ {sd['Special_Attributes']}")
+
             # Budget -> Shopping List
             st.markdown(f"### 🛒 Fertilizer Shopping List")
             st.caption(f"Exact quantities required for your **{farm_acres} acres**.")
