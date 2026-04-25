@@ -96,7 +96,6 @@ class FarmIQRecommender:
         if os.path.exists(cr_path):
             self.comp_reasons = pd.read_csv(cr_path)
         
-        self.raster_path = os.path.join(os.path.dirname(__file__), "data", "rasters", "kenya_ph.tif")
         
         # Load county centroids from CSV (editable without touching code)
         coords_path = os.path.join(self.data_dir, "county_coordinates.csv")
