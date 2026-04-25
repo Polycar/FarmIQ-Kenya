@@ -462,16 +462,20 @@ with tab_farmer:
             # Advice
             st.markdown(f"### 💡 {t['advice_title']}")
             for item in result["advice"]:
-                if any(x in item for x in ["❌", "🚨", "Ukosefu"]): st.error(item, icon="🚨")
-                elif any(x in item for x in ["⚠️", "Tahadhari"]): st.warning(item, icon="⚠️")
-                elif any(x in item for x in ["💡", "Msimu"]): st.info(item, icon="💡")
-                else: st.success(item, icon="✅")
+                clean_item = item
+                for emoji in ["🚨", "❌", "⚠️", "💡", "✅", "🚀", "🍃", "🏔️"]:
+                    if clean_item.startswith(emoji):
+                        clean_item = clean_item[len(emoji):].strip()
+                        break
+                if any(x in item for x in ["❌", "🚨", "Ukosefu"]): st.error(clean_item, icon="🚨")
+                elif any(x in item for x in ["⚠️", "Tahadhari"]): st.warning(clean_item, icon="⚠️")
+                elif any(x in item for x in ["💡", "Msimu"]): st.info(clean_item, icon="💡")
+                else: st.success(clean_item, icon="✅")
 
             # Weather Context
             saved_lat = st.session_state.get('saved_lat')
             saved_lon = st.session_state.get('saved_lon')
             
-            # If no GPS provided, fallback to the county's central coordinates
             if not saved_lat or not saved_lon or saved_lat == 0.0 or saved_lon == 0.0:
                 weather_lat, weather_lon = get_county_coordinates(selected_county)
             else:
@@ -481,12 +485,17 @@ with tab_farmer:
                 weather_advice = get_weather_context(weather_lat, weather_lon)
             if weather_advice:
                 st.markdown("### ⛅ 7-Day Weather Context")
+                clean_weather = weather_advice
+                for emoji in ["✅", "🌧️", "⚠️", "⛅"]:
+                    if clean_weather.startswith(emoji):
+                        clean_weather = clean_weather[len(emoji):].strip()
+                        break
                 if "✅" in weather_advice:
-                    st.success(weather_advice, icon="✅")
+                    st.success(clean_weather, icon="✅")
                 elif "🌧️" in weather_advice:
-                    st.error(weather_advice, icon="🌧️")
+                    st.error(clean_weather, icon="🌧️")
                 else:
-                    st.warning(weather_advice, icon="⚠️")
+                    st.warning(clean_weather, icon="⚠️")
 
             # --- Reverse Recommendation (Best Crop Matches) ---
             st.markdown(f"### 🌱 {('Crop Suitability Match' if lang_choice == 'English' else 'Mazao Yanayofaa Zaidi')}")
