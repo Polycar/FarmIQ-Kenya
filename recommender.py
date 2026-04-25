@@ -590,6 +590,11 @@ class FarmIQRecommender:
                 timeline["month_2"] = "Palizi ya kwanza na Kuangalia Ukuaji"
                 timeline["month_3"] = "Ulinzi na Kuangalia Mazao"
 
+        # Nutrient Status Flags for Database Compatibility
+        is_n_low = n_val < reqs["n_min"]
+        is_p_low = p_val < reqs["p_min"]
+        is_k_low = k_val < reqs["k_min"]
+
         return {
             "county_data": soil, "crop": crop, "current_fert": current_fert, "advice": advice, "timeline": timeline, "reqs": reqs,
             "budget": {"breakdown": breakdown, "total_budget": int(total_cost), "farm_size": farm_size_acres},
