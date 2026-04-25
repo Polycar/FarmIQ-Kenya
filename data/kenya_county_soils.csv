@@ -1,16 +1,11 @@
 County,Agroecological Zone,pH,Total Nitrogen (g/kg),Extractable Phosphorus (mg/kg),Extractable Potassium (mg/kg),Organic Carbon (g/kg)
-Kiambu (General),Central Highlands,5.28,1.01,13.7,169.0,26.4
-Kiambu (Limuru),Highland Tea Zone,4.82,1.45,18.5,210.0,32.0
-Kiambu (Thika),Lower Midland,6.25,0.85,22.0,185.0,15.5
-Kiambu (Kikuyu),Coffee Zone,5.65,1.10,15.0,175.0,24.0
+Kiambu,Central Highlands,5.28,1.01,13.7,169.0,26.4
 Kirinyaga,Central Highlands,5.31,1.36,12.5,177.0,22.2
 Murang'a,Central Highlands,5.03,1.2,12.2,168.0,25.9
 Nyeri,Central Highlands,5.23,1.09,15.5,192.0,22.0
 Nyandarua,Central Highlands,5.38,1.28,14.0,166.0,27.7
 Embu,Central Highlands,5.1,1.04,12.6,194.0,25.6
-Nakuru (General),Rift Valley,6.28,1.59,25.2,239.0,19.3
-Nakuru (Molo),Highland Pyrethrum/Potato,5.15,1.85,15.0,195.0,28.5
-Nakuru (Naivasha),Semi-Arid Plains,7.15,0.75,35.0,310.0,12.0
+Nakuru,Rift Valley,6.28,1.59,25.2,239.0,19.3
 Narok,Rift Valley,6.13,1.63,25.7,234.0,20.5
 Baringo,Rift Valley,6.22,1.32,23.4,212.0,17.5
 Kericho,Rift Valley,5.94,1.34,23.7,225.0,19.2
@@ -51,22 +46,3 @@ Wajir,Arid North-East,8.4,0.52,39.3,396.0,4.8
 Mandera,Arid North-East,8.38,0.53,38.3,420.0,3.3
 Nairobi,Nairobi Metro,6.85,1.1,22.1,236.0,17.8
 Kajiado,Nairobi Metro,6.55,0.97,20.6,257.0,13.4
-Kiambu (Gatundu South),Central Highlands,5.28,1.01,13.7,169.0,26.4
-Kiambu (Gatundu North),Central Highlands,5.28,1.01,13.7,169.0,26.4
-Kiambu (Juja),Lower Midland,6.25,0.85,22.0,185.0,15.5
-Kiambu (Thika Town),Lower Midland,6.25,0.85,22.0,185.0,15.5
-Kiambu (Ruiru),Lower Midland,6.25,0.85,22.0,185.0,15.5
-Kiambu (Githunguri),Coffee Zone,5.65,1.10,15.0,175.0,24.0
-Kiambu (Kiambu),Coffee Zone,5.65,1.10,15.0,175.0,24.0
-Kiambu (Kiambaa),Coffee Zone,5.65,1.10,15.0,175.0,24.0
-Kiambu (Kabete),Coffee Zone,5.65,1.10,15.0,175.0,24.0
-Kiambu (Lari),Highland Tea Zone,4.82,1.45,18.5,210.0,32.0
-Nakuru (Nakuru Town West),Rift Valley,6.28,1.59,25.2,239.0,19.3
-Nakuru (Nakuru Town East),Rift Valley,6.28,1.59,25.2,239.0,19.3
-Nakuru (Kuresoi South),Highland Pyrethrum/Potato,5.15,1.85,15.0,195.0,28.5
-Nakuru (Kuresoi North),Highland Pyrethrum/Potato,5.15,1.85,15.0,195.0,28.5
-Nakuru (Rongai),Rift Valley,6.28,1.59,25.2,239.0,19.3
-Nakuru (Subukia),Rift Valley,6.28,1.59,25.2,239.0,19.3
-Nakuru (Njoro),Highland Pyrethrum/Potato,5.15,1.85,15.0,195.0,28.5
-Nakuru (Gilgil),Semi-Arid Plains,7.15,0.75,35.0,310.0,12.0
-Nakuru (Bahati),Rift Valley,6.28,1.59,25.2,239.0,19.3
