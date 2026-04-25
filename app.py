@@ -42,17 +42,35 @@ st.markdown("""
     .data-pill { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; margin: 0.25rem; }
     .pill-bad { background: #fee2e2; color: #b91c1c; }
     .pill-good { background: #dcfce3; color: #15803d; }
-    
-    /* Ultimate owner-view suppression: hide everything that isn't the app itself */
-    [data-testid="stHeader"], [data-testid="stAppDeployButton"], footer, header, #MainMenu { display: none !important; }
-    
-    /* Target the 'Manage app' button and bottom toolbar badges using wildcards */
-    div[class*="viewerBadge"], [data-testid="stStatusWidget"], [data-testid="stConnectionStatus"] { display: none !important; }
-    .stAppDeployButton { display: none !important; }
-    button[data-testid="stBaseButton-secondary"] { display: none !important; }
-    div[class*="viewerBadge"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
+
+# --- Gemini helper ---
+import requests as _requests
+
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+
+def call_gemini(system_prompt: str, messages: list, api_key: str, max_tokens: int = 400) -> str:
+    """Call Gemini 2.0 Flash securely."""
+    contents = []
+    for m in messages:
+        role = "user" if m["role"] == "user" else "model"
+        contents.append({"role": role, "parts": [{"text": m["content"]}]})
+
+    payload = {
+        "system_instruction": {"parts": [{"text": system_prompt}]},
+        "contents": contents,
+        "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.7},
+    }
+
+    resp = _requests.post(
+        GEMINI_URL,
+        params={"key": api_key},
+        json=payload,
+        timeout=20,
+    )
+    resp.raise_for_status()
+    return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 # --- Language Mapping ---
 LANGS = {
@@ -63,6 +81,9 @@ LANGS = {
         "advice_title": "Actionable Advice", "share": "Share WhatsApp", "download_pdf": "Download PDF",
         "dealers_title": "🛍️ Suppliers Nearby", "directions": "Directions", "sms_button": "SMS Fallback",
         "switch_title": "The Switch: Impact Analysis",
+        "chat_tab": "💬 Ask Mama Ardhi", "chat_placeholder": "Ask anything about your soil...",
+        "chat_thinking": "Mama Ardhi is thinking...", "chat_reset": "🔄 Reset conversation",
+        "no_result": "Run a soil analysis first on the **Get Advice** tab, then come back here.",
         "table_feature": "Feature", "table_habit": "Your Habit", "table_rec": "FarmIQ Recommendation",
         "table_strategy": "Strategy", "table_outcome": "Outcome",
         "chart_title": "Nutrient Sufficiency Dashboard",
@@ -77,6 +98,9 @@ LANGS = {
         "advice_title": "Ushauri", "share": "Shiriki WhatsApp", "download_pdf": "Pakua PDF",
         "dealers_title": "🛍️ Wauzaji", "directions": "Maelekezo", "sms_button": "SMS",
         "switch_title": "Mabadiliko: Uchambuzi wa Matokeo",
+        "chat_tab": "💬 Uliza Mama Ardhi", "chat_placeholder": "Uliza swali lolote kuhusu udongo wako...",
+        "chat_thinking": "Mama Ardhi anafikiri...", "chat_reset": "🔄 Anza upya mazungumzo",
+        "no_result": "Kwanza fanya uchambuzi wa udongo kwenye kichupo cha **Ushauri**, kisha rudi hapa.",
         "table_feature": "Kipengele", "table_habit": "Tabia Yako", "table_rec": "Ushauri wa FarmIQ",
         "table_strategy": "Mkakati", "table_outcome": "Matokeo",
         "chart_title": "Dashibodi ya Kutosha kwa Virutubisho",
@@ -110,9 +134,9 @@ with st.sidebar:
 
 # Main Navigation
 if is_officer:
-    tab_farmer, tab_yield, tab_officer = st.tabs(["🌾 Get Advice", "📈 Track Yield", "🏢 Dashboard"])
+    tab_farmer, tab_yield, tab_chat, tab_officer = st.tabs(["🌾 Get Advice", "📈 Track Yield", t["chat_tab"], "🏢 Dashboard"])
 else:
-    tab_farmer, tab_yield = st.tabs(["🌾 Get Advice", "📈 Track Yield"])
+    tab_farmer, tab_yield, tab_chat = st.tabs(["🌾 Get Advice", "📈 Track Yield", t["chat_tab"]])
 
 with tab_farmer:
     st.markdown(f'<div class="hero-card"><h1>🌱 FarmIQ</h1><p>National Precision Agriculture Platform</p></div>', unsafe_allow_html=True)
@@ -636,6 +660,118 @@ with tab_yield:
                             st.warning(f"📉 Your {crop} yield decreased by **{abs(growth):.1f}%**. Make sure to follow the precise fertilizer timelines.")
         else:
             st.info("No harvest data found for this Farm ID. Log your first harvest above!")
+
+with tab_chat:
+    st.markdown('<div class="hero-card"><h1>🌿 Mama Ardhi</h1><p>Your Personal FarmIQ Agronomist</p></div>', unsafe_allow_html=True)
+
+    if "result" not in st.session_state or "error" in st.session_state.get("result", {}):
+        st.info(t["no_result"])
+    elif not ai_key:
+        st.warning("⚙️ AI Agronomist requires GEMINI_API_KEY in secrets or Sidebar.")
+    else:
+        result    = st.session_state.result
+        soil      = result.get("county_data", {})
+        county    = st.session_state.get("last_county", "Kenya")
+        crop      = st.session_state.get("last_crop", result.get("crop", "Maize"))
+        score     = result.get("health_score", 50)
+        ds        = result.get("data_source", "Baseline")
+        rec       = result.get("comparison", {}).get("recommended", "Balanced Fertilizer")
+        budget    = result.get("budget", {}).get("total_budget", 0)
+        breakdown = result.get("budget", {}).get("breakdown", [])
+        advice    = result.get("advice", [])
+
+        lang_instruction = (
+            "Respond in Kiswahili, using simple everyday language."
+            if lang_choice == "Kiswahili"
+            else "Respond in clear, simple English suited to a smallholder farmer."
+        )
+
+        system_prompt = f"""You are Mama Ardhi, a warm and expert agronomist for FarmIQ Kenya.
+You have just completed a precision soil analysis for a farmer in {county} County growing {crop}.
+
+ACTUAL SOIL DATA FOR THIS FARM:
+- pH: {soil.get('pH', 'N/A')}
+- Total Nitrogen: {soil.get('Total Nitrogen (mg/kg)', 'N/A')} mg/kg
+- Extractable Phosphorus: {soil.get('Extractable Phosphorus (mg/kg)', 'N/A')} mg/kg
+- Extractable Potassium: {soil.get('Extractable Potassium (mg/kg)', 'N/A')} mg/kg
+- Organic Carbon: {soil.get('Organic Carbon (g/kg)', 'N/A')} g/kg
+- Soil Health Score: {score}/100
+- Data Source: {ds}
+
+FARMIQ RECOMMENDATION:
+- Fertilizer: {rec}
+- Budget: KES {budget:,}
+- Breakdown: {', '.join(breakdown) if breakdown else 'None'}
+
+SYSTEM ADVICE FLAGS:
+{chr(10).join(advice)}
+
+YOUR ROLE:
+- Explain results and recommendations in plain farmer language
+- Answer follow-up questions grounded strictly in the numbers above — never invent values
+- Suggest practical alternatives when a product is unavailable or too expensive
+- Be honest about data uncertainty (satellite estimate vs lab test)
+- Keep answers concise (3-5 sentences) unless detail is clearly needed
+- Be warm, encouraging, specific to Kenyan farming conditions and seasons
+
+{lang_instruction}"""
+
+        # Reset chat when a new analysis is run
+        context_key = f"{county}_{crop}_{score}"
+        if st.session_state.get("agro_context_key") != context_key:
+            st.session_state.agro_context_key = context_key
+            st.session_state.agro_messages    = []
+
+            # Auto-generate opening message
+            try:
+                seed = [{"role": "user", "content": "Please greet me and summarise my soil results and the recommended action in plain language."}]
+                intro = call_gemini(system_prompt, seed, api_key=ai_key, max_tokens=350)
+            except Exception:
+                intro = (
+                    f"Habari! I'm Mama Ardhi, your FarmIQ agronomist. Your soil in {county} scored **{score}/100**. "
+                    f"The main recommendation is **{rec}**. Ask me anything about your results."
+                    if lang_choice == "English" else
+                    f"Habari! Mimi ni Mama Ardhi. Udongo wako {county} umepata alama **{score}/100**. "
+                    f"Pendekezo kuu ni **{rec}**. Niulize chochote."
+                )
+            st.session_state.agro_messages = [
+                {"role": "user",  "content": "Please greet me and summarise my soil results and the recommended action in plain language."},
+                {"role": "model", "content": intro},
+            ]
+
+        # Render conversation (skip hidden seed message)
+        for i, msg in enumerate(st.session_state.agro_messages):
+            if i == 0:
+                continue
+            role   = "user" if msg["role"] == "user" else "assistant"
+            avatar = "🌿" if role == "assistant" else None
+            with st.chat_message(role, avatar=avatar):
+                st.markdown(msg["content"])
+
+        # Chat input
+        user_input = st.chat_input(t["chat_placeholder"])
+        if user_input:
+            st.session_state.agro_messages.append({"role": "user", "content": user_input})
+            with st.chat_message("user"):
+                st.markdown(user_input)
+
+            with st.chat_message("assistant", avatar="🌿"):
+                try:
+                    reply = call_gemini(system_prompt, st.session_state.agro_messages, api_key=ai_key, max_tokens=400)
+                except Exception:
+                    reply = (
+                        "Sorry, I couldn't connect right now. Please try again."
+                        if lang_choice == "English"
+                        else "Samahani, sikuweza kuungana. Tafadhali jaribu tena."
+                    )
+                st.markdown(reply)
+                st.session_state.agro_messages.append({"role": "model", "content": reply})
+
+        if len(st.session_state.get("agro_messages", [])) > 2:
+            if st.button(t["chat_reset"], key="reset_agro"):
+                st.session_state.pop("agro_messages",    None)
+                st.session_state.pop("agro_context_key", None)
+                st.rerun()
 
 # Extension Dashboard
 if is_officer:
