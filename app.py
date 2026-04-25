@@ -484,6 +484,7 @@ with tab_farmer:
             with st.spinner("Fetching 7-day weather forecast..."):
                 weather_advice = get_weather_context(weather_lat, weather_lon)
             if weather_advice:
+                result["weather_advice"] = weather_advice
                 st.markdown("### ⛅ 7-Day Weather Context")
                 clean_weather = weather_advice
                 for emoji in ["✅", "🌧️", "⚠️", "⛅"]:
