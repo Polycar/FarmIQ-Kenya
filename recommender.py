@@ -561,10 +561,34 @@ class FarmIQRecommender:
         impact_rec = get_reason("Impact_Optimized")
         impact_cur = get_reason("Impact_Variable")
             
-        # Nutrient Status Flags for Database Compatibility
-        is_n_low = n_val < reqs["n_min"]
-        is_p_low = p_val < reqs["p_min"]
-        is_k_low = k_val < reqs["k_min"]
+        # 9. Fix Timeline Contradictions dynamically based on exact calculated requirements
+        if p_bags == 0 and n_bags == 0:
+            if lang == "English":
+                timeline["month_1"] = "Land Prep & Sowing (No basal needed)"
+                timeline["month_2"] = "1st Weeding & Growth Monitoring"
+                timeline["month_3"] = "Scouting & Harvesting Prep"
+            else:
+                timeline["month_1"] = "Tayarisha Shamba na Panda (Mbolea haihitajiki)"
+                timeline["month_2"] = "Palizi ya kwanza na Kuangalia Ukuaji"
+                timeline["month_3"] = "Ulinzi na Kuangalia Mazao"
+        elif p_bags == 0 and n_bags > 0:
+            if lang == "English":
+                timeline["month_1"] = "Land Prep & Sowing"
+                timeline["month_2"] = f"Top Dressing ({n_type}) & Weeding"
+                timeline["month_3"] = "Late Stage Protection"
+            else:
+                timeline["month_1"] = "Tayarisha Shamba na Panda"
+                timeline["month_2"] = f"Mbolea ya Kukuzia ({n_type}) na Palizi"
+                timeline["month_3"] = "Kuangalia Wadudu na Kuvuna"
+        elif p_bags > 0 and n_bags == 0:
+            if lang == "English":
+                timeline["month_1"] = f"Land Prep, Sowing & Basal ({p_type})"
+                timeline["month_2"] = "1st Weeding & Growth Monitoring"
+                timeline["month_3"] = "Scouting & Crop Protection"
+            else:
+                timeline["month_1"] = f"Tayarisha Shamba, Panda na Mbolea ({p_type})"
+                timeline["month_2"] = "Palizi ya kwanza na Kuangalia Ukuaji"
+                timeline["month_3"] = "Ulinzi na Kuangalia Mazao"
 
         return {
             "county_data": soil, "crop": crop, "current_fert": current_fert, "advice": advice, "timeline": timeline, "reqs": reqs,
