@@ -758,12 +758,8 @@ YOUR ROLE:
             with st.chat_message("assistant", avatar="🌿"):
                 try:
                     reply = call_gemini(system_prompt, st.session_state.agro_messages, api_key=ai_key, max_tokens=400)
-                except Exception:
-                    reply = (
-                        "Sorry, I couldn't connect right now. Please try again."
-                        if lang_choice == "English"
-                        else "Samahani, sikuweza kuungana. Tafadhali jaribu tena."
-                    )
+                except Exception as e:
+                    reply = f"⚠️ Connection Error: {str(e)}. Please verify your GEMINI_API_KEY is valid in the app secrets or sidebar."
                 st.markdown(reply)
                 st.session_state.agro_messages.append({"role": "model", "content": reply})
 
