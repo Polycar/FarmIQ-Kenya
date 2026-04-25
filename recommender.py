@@ -3,7 +3,6 @@ import numpy as np
 import os
 import requests
 import datetime
-import google.generativeai as genai
 import streamlit as st
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -632,55 +631,6 @@ class FarmIQRecommender:
         else:
             return f"FarmIQ: Ripoti ya {result['crop']}. Afya: {result['health_score']}/100. Pendekezo: {result['comparison']['recommended']}. Gharama: KES {result['budget']['total_budget']:,} kwa ekari."
 
-    def generate_ai_advisory(self, result, api_key=None, lang="English"):
-        """
-        Generates a plain-language agronomic briefing using AI.
-        """
-        if not api_key:
-            return None
-            
-        try:
-            genai.configure(api_key=api_key)
-            try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
-            except:
-                model = genai.GenerativeModel('gemini-pro')
-            
-            # Construct a high-context prompt
-            county = result.get("county_data", {}).get("County", "Unknown")
-            crop = result.get("crop", "Maize")
-            soil = result.get("county_data", {})
-            budget = result.get("budget", {})
-            timeline = result.get("timeline", {})
-            
-            prompt = f"""
-            You are 'Mshauri wa FarmIQ', a senior Kenyan agronomist. 
-            Explain this technical soil recommendation to a farmer in {lang}. 
-            Keep it professional, encouraging, and focused on the 'Why'.
-            
-            DATA CONTEXT:
-            - County: {county}
-            - Crop: {crop}
-            - Soil pH: {soil.get('pH', 'N/A')}
-            - Notable Issues: {', '.join(result.get('advice', []))}
-            - Aluminium: {soil.get('Aluminium Toxicity (ppm)', 'N/A')} ppm
-            - Zinc: {soil.get('Zinc Extractable (ppm)', 'N/A')} ppm
-            - Fertilizer Strategy: {result.get('primary_fertilizer', 'DAP')} for planting.
-            - Total Budget: KES {budget.get('total_budget', 0):,.2f}
-            
-            INSTRUCTIONS:
-            1. Start with a warm greeting.
-            2. Explain what the soil data means for their {crop} crop in simple terms.
-            3. Highlight why the specific fertilizer (like Lime or Zinc) was recommended.
-            4. End with a 1-sentence motivational closing.
-            5. Use formatting like bold text for emphasis.
-            6. Maximum 250 words.
-            """
-            
-            response = model.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            return f"Error generating AI advisory: {str(e)}"
 
     def match_crops_to_soil(self, result, farm_acres=1.0, lang="English"):
         """
