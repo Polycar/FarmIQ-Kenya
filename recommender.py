@@ -705,9 +705,9 @@ class FarmIQRecommender:
         except: pass
 
         # Nutrient values
-        n_val = soil.get("nitrogen_total", 0) 
-        p_val = soil.get("phosphorus_extractable", 0)
-        k_val = soil.get("potassium_extractable", 0)
+        n_val = soil.get("Total Nitrogen (g/kg)", 0) 
+        p_val = soil.get("Extractable Phosphorus (mg/kg)", 0)
+        k_val = soil.get("Extractable Potassium (mg/kg)", 0)
         al_val = soil.get("Aluminium (ppm)", 0)
 
         results = []
