@@ -22,7 +22,6 @@ st.set_page_config(
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
-@st.cache_resource
 def load_farmiq_engine():
     try:
         return FarmIQRecommender(DATA_PATH)
