@@ -398,17 +398,29 @@ class FarmIQRecommender:
             mg_val = soil.get("Magnesium (ppm)", 100.0)
             lime_type = "Dolomitic Lime" if mg_val < 50.0 else "Calcitic Lime"
             
+            # Buffering Capacity based on Texture
+            texture = soil.get("Texture", "Loam")
+            if "Clay" in texture:
+                buff_factor = 15.0
+            elif "Sand" in texture:
+                buff_factor = 6.0
+            else:
+                buff_factor = 10.0
+                
             gap = reqs["ph_min"] - ph_val
-            lime_bags = gap * 10 * farm_size_acres
+            lime_bags = gap * buff_factor * farm_size_acres
+            lower_lime = max(0.5, lime_bags * 0.8)
+            upper_lime = lime_bags * 1.2
+            
             breakdown.append(f"Basal Adj: {lime_bags:.1f} x bags {lime_type}")
             total_cost += lime_bags * mp.get("Lime", 500)
             
             if al_val > 50:
-                if lang == "English": advice.append(f"🚨 **Aluminium Toxicity Detected**: Al is {al_val:.1f} ppm — actively poisoning roots. pH {ph_display} is too low. Apply {lime_bags:.1f} bags of {lime_type} immediately.")
-                else: advice.append(f"🚨 **Sumu ya Alumini**: Al ni {al_val:.1f} ppm — inaharibu mizizi. pH {ph_display} iko chini. Tumia mifuko {lime_bags:.1f} ya {lime_type} mara moja.")
+                if lang == "English": advice.append(f"🚨 **Aluminium Toxicity Detected**: Al is {al_val:.1f} ppm — actively poisoning roots. pH {ph_display} is too low. Apply **{lower_lime:.1f} to {upper_lime:.1f} bags** of {lime_type} immediately.")
+                else: advice.append(f"🚨 **Sumu ya Alumini**: Al ni {al_val:.1f} ppm. Tumia **mifuko {lower_lime:.1f} hadi {upper_lime:.1f}** za {lime_type} mara moja.")
             else:
-                if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_display} is too low for {crop}. Apply {lime_bags:.1f} bags of {lime_type}.")
-                else: advice.append(f"🚨 **Asidi Kali**: pH {ph_display} ni ya chini sana kwa {crop}. Tumia mifuko {lime_bags:.1f} ya {lime_type}.")
+                if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_display} is too low for {crop}. Apply **{lower_lime:.1f} to {upper_lime:.1f} bags** of {lime_type}.")
+                else: advice.append(f"🚨 **Asidi Kali**: pH {ph_display} ni ya chini sana. Tumia **mifuko {lower_lime:.1f} hadi {upper_lime:.1f}** za {lime_type}.")
         else:
             al_val = soil.get("Aluminium (ppm)", 0)
             ca_val = soil.get("Calcium (ppm)", 1000.0)
@@ -419,17 +431,12 @@ class FarmIQRecommender:
                 advice.append(f"✅ **pH & Aluminium**: pH is {status} ({ph_display}). Aluminium is {al_str} ({al_val:.1f} ppm).")
                 if ca_val < 300.0:
                     gyp_bags = 2.0 * farm_size_acres
-                    breakdown.append(f"Calcium Supplement: {gyp_bags:.1f} x bags Gypsum")
-                    total_cost += gyp_bags * mp.get("Gypsum", 350)
-                    advice.append(f"⚠️ **Calcium Deficiency**: Ca is low ({ca_val:.1f} ppm). Apply {gyp_bags:.1f} bags of Gypsum to resolve without altering pH.")
+                    advice.append(f"⚠️ **Calcium Deficiency**: Ca is low ({ca_val:.1f} ppm). Apply **1.5 to 2.5 bags** of Gypsum.")
             else: 
                 al_str = "Salama" if (al_val >= 50 and ph_val >= 5.5) else "Salama" if al_status=="Safe" else "Juu"
                 advice.append(f"✅ **pH na Alumini**: pH iko {status} ({ph_display}). Alumini iko {al_str} ({al_val:.1f} ppm).")
                 if ca_val < 300.0:
-                    gyp_bags = 2.0 * farm_size_acres
-                    breakdown.append(f"Kalsiamu Nyongeza: {gyp_bags:.1f} x mifuko Gypsum")
-                    total_cost += gyp_bags * mp.get("Gypsum", 350)
-                    advice.append(f"⚠️ **Upungufu wa Kalsiamu**: Ca iko chini ({ca_val:.1f} ppm). Tumia mifuko {gyp_bags:.1f} za Gypsum.")
+                    advice.append(f"⚠️ **Upungufu wa Kalsiamu**: Ca iko chini ({ca_val:.1f} ppm). Tumia **mifuko 1.5 hadi 2.5** za Gypsum.")
 
         # 4. Stage 1: Basal Calculation (1 mg/kg gap = 1 kg/acre nutrient needed)
         p_val = soil["Extractable Phosphorus (mg/kg)"]
@@ -442,10 +449,12 @@ class FarmIQRecommender:
         
         if p_bags >= 0.05:
             qty = p_bags * farm_size_acres
+            p_lower = max(0.25, qty * 0.75)
+            p_upper = qty * 1.25
             breakdown.append(f"Stage 1 (Basal): {qty:.2f} x bags {p_type}")
             total_cost += qty * mp.get(p_type, 0)
-            if lang == "English": advice.append(f"⚠️ **Phosphorus Deficiency**: P is low ({p_val:.1f} mg/kg). Apply {qty:.1f} bags {p_type} as basal fertilizer.")
-            else: advice.append(f"⚠️ **Upungufu wa Fosforasi**: P iko chini ({p_val:.1f} mg/kg). Tumia mifuko {qty:.1f} za {p_type} kwa ajili ya kupanda.")
+            if lang == "English": advice.append(f"⚠️ **Phosphorus Deficiency**: P is low ({p_val:.1f} mg/kg). Recommended: **{p_lower:.1f} to {p_upper:.1f} bags** of {p_type}.")
+            else: advice.append(f"⚠️ **Upungufu wa Fosforasi**: P iko chini. Pendekezo: **mifuko {p_lower:.1f} hadi {p_upper:.1f}** za {p_type}.")
         else:
 
             p_bags = 0
@@ -479,10 +488,12 @@ class FarmIQRecommender:
                 
                 if n_bags >= 0.05:
                     qty = n_bags * farm_size_acres
+                    n_lower = max(0.5, qty * 0.8)
+                    n_upper = qty * 1.2
                     if lang == "English":
-                        advice.append(f"🚀 **Stage 2 (Top Dress)**: Apply {qty:.1f} bags {n_type} at **{rule['Timing']}**. {rule['Instruction']}")
+                        advice.append(f"🚀 **Stage 2 (Top Dress)**: Apply **{n_lower:.1f} to {n_upper:.1f} bags** of {n_type} at **{rule['Timing']}**. {rule['Instruction']}")
                     else:
-                        advice.append(f"🚀 **Hatua ya 2 (Kukuzia)**: Tumia mifuko {qty:.1f} za {n_type} wakati wa **{rule['Timing']}**. {rule['Instruction']}")
+                        advice.append(f"🚀 **Hatua ya 2 (Kukuzia)**: Tumia **mifuko {n_lower:.1f} hadi {n_upper:.1f}** za {n_type} wakati wa **{rule['Timing']}**. {rule['Instruction']}")
                 else:
                     n_bags = 0
                     if lang == "English": advice.append(f"✅ **Nitrogen**: Sufficient ({n_display}). No top dress required.")
