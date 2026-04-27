@@ -600,17 +600,15 @@ with tab_doctor:
                             st.stop()
                             
                         if isinstance(res_json, list) and len(res_json) > 0:
-                                top_prediction = res_json[0]
-                                label = top_prediction.get("label", "Healthy / Undiagnosed").replace("___", " - ").replace("_", " ")
-                                score = top_prediction.get("score", 0) * 100
-                                
-                                st.markdown(f"### 📋 PlantVillage Diagnosis")
-                                st.success(f"**Predicted Condition:** {label}")
-                                st.info(f"Confidence accuracy: **{score:.2f}%**")
-                            else:
-                                st.error("⚠️ Inference server limit reached. Switch to Gemini AI.")
-                        except Exception as hf_err:
-                            st.error(f"⚠️ PlantVillage access issue: {str(hf_err)}")
+                            top_prediction = res_json[0]
+                            label = top_prediction.get("label", "Healthy / Undiagnosed").replace("___", " - ").replace("_", " ")
+                            score = top_prediction.get("score", 0) * 100
+                            
+                            st.markdown(f"### 📋 PlantVillage Diagnosis")
+                            st.success(f"**Predicted Condition:** {label}")
+                            st.info(f"Confidence accuracy: **{score:.2f}%**")
+                        else:
+                            st.error("⚠️ Inference server limit reached. Switch to Gemini AI.")
                 else:
                     api_key = st.secrets.get("GEMINI_API_KEY")
                     if not api_key:
