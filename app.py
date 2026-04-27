@@ -569,8 +569,6 @@ with tab_doctor:
                     st.error("⚠️ Gemini API Key not found. Please add `GEMINI_API_KEY` to your Streamlit secrets.")
                 else:
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-2.0-flash')
-                    
                     image_bytes = target_img.read()
                     pil_image = Image.open(io.BytesIO(image_bytes))
                     
@@ -584,7 +582,16 @@ with tab_doctor:
                     """
                     
                     with st.spinner("Consulting digital agronomist..."):
-                        response = model.generate_content([prompt, pil_image])
+                        try:
+                            model = genai.GenerativeModel('gemini-2.0-flash')
+                            response = model.generate_content([prompt, pil_image])
+                        except Exception as e2:
+                            if "429" in str(e2) or "quota" in str(e2).lower():
+                                st.info("🔄 Gemini 2.0 quota reached. Re-routing via Gemini 1.5...")
+                                model = genai.GenerativeModel('gemini-1.5-flash')
+                                response = model.generate_content([prompt, pil_image])
+                            else:
+                                raise e2
                         
                     st.markdown("### 📋 Diagnosis & Recommendations")
                     st.write(response.text)
