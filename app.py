@@ -53,9 +53,10 @@ footer,header,#MainMenu{display:none!important;}
     color: #0f172a !important;
 }
 
-/* White text exceptions for designed cards */
+/* White text exceptions for designed cards and camera capture */
 .hero-card h1, .hero-card p, .score-box h1, .score-box p, 
-div[data-testid="stButton"] button, div[data-testid="stButton"] button p {
+div[data-testid="stButton"] button, div[data-testid="stButton"] button p,
+div[data-testid="stCameraInput"] button, div[data-testid="stCameraInput"] button span {
     color: #ffffff !important;
 }
 
