@@ -552,7 +552,9 @@ with tab_farmer:
             st.markdown('<div style="text-align:center;color:#94a3b8;font-size:.75rem;">📊 iSDAsoil (2021) 30m | 🧪 Kenyan Agronomic Baselines | 🌍 FarmIQ Kenya</div>', unsafe_allow_html=True)
 
     with st.expander("🛠️ Advanced Settings"):
-        st.text_input("Officer Access Code", type="password", key="main_access")
+        c_access = st.text_input("Officer Access Code", type="password", key="main_access")
+        if c_access and c_access.upper() == officer_pw.upper() and not is_officer:
+            st.rerun()
         st.info("System Online | Engine v43")
         if is_officer: st.success("✅ Officer Access Granted!")
 
