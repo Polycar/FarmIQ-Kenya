@@ -153,9 +153,9 @@ with st.sidebar:
 
 # ── Tabs ──
 if is_officer:
-    tab_farmer, tab_yield, tab_officer = st.tabs(["🌾 Advice", "📈 Yield", "🏢 Dashboard"])
+    tab_farmer, tab_yield, tab_doctor, tab_officer = st.tabs(["🌾 Advice", "📈 Yield", "📸 Plant Doctor", "🏢 Dashboard"])
 else:
-    tab_farmer, tab_yield = st.tabs(["🌾 Get Advice", "📈 Track Yield"])
+    tab_farmer, tab_yield, tab_doctor = st.tabs(["🌾 Get Advice", "📈 Track Yield", "📸 Plant Doctor"])
 
 
 # ════════════════════════════════════════════════════════════════
@@ -495,7 +495,58 @@ with tab_yield:
 
 
 # ════════════════════════════════════════════════════════════════
-# TAB 3 — DASHBOARD (officers only)
+# TAB 3 — PLANT DOCTOR
+# ════════════════════════════════════════════════════════════════
+with tab_doctor:
+    st.markdown('<div class="hero-card"><h1>📸 Plant Doctor</h1><p>AI Pest & Disease Diagnostics</p></div>', unsafe_allow_html=True)
+    st.markdown("Snap a photo of a sick plant leaf or stem to get instant localized troubleshooting advice.")
+    
+    cam_img = st.camera_input("Take a picture of the plant")
+    uploaded_img = st.file_uploader("Or upload a photo from your gallery", type=["jpg", "png", "jpeg"])
+    
+    target_img = cam_img or uploaded_img
+    
+    if target_img:
+        st.image(target_img, caption="Captured Sample", use_container_width=True)
+        
+        if st.button("🔍 Analyze with AI", type="primary", use_container_width=True):
+            # Safe access wrapping
+            try:
+                import google.generativeai as genai
+                from PIL import Image
+                import io
+                
+                api_key = st.secrets.get("GEMINI_API_KEY")
+                if not api_key:
+                    st.error("⚠️ Gemini API Key not found. Please add `GEMINI_API_KEY` to your Streamlit secrets.")
+                else:
+                    genai.configure(api_key=api_key)
+                    model = genai.GenerativeModel('gemini-2.0-flash')
+                    
+                    image_bytes = target_img.read()
+                    pil_image = Image.open(io.BytesIO(image_bytes))
+                    
+                    prompt = """
+                    You are an expert Multimodal Agronomist serving Kenyan farmers. 
+                    Examine the uploaded picture carefully.
+                    1. Identify the crop species.
+                    2. Diagnose any visible pest damage, fungus, bacterial blight, or nutrient deficiency.
+                    3. Recommend immediate actionable organic or chemical treatments safe for smallholder contexts.
+                    Keep your response direct, empathetic, and formatted in structured bullet points.
+                    """
+                    
+                    with st.spinner("Consulting digital agronomist..."):
+                        response = model.generate_content([prompt, pil_image])
+                        
+                    st.markdown("### 📋 Diagnosis & Recommendations")
+                    st.write(response.text)
+                    
+            except Exception as e:
+                st.error(f"⚠️ An error occurred during analysis: {str(e)}")
+
+
+# ════════════════════════════════════════════════════════════════
+# TAB 4 — DASHBOARD (officers only)
 # ════════════════════════════════════════════════════════════════
 if is_officer:
     with tab_officer:
