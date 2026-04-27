@@ -451,7 +451,10 @@ with tab_farmer:
                 st.markdown("**Normalized Difference Vegetation Index (NDVI)** measures the density of live green chlorophyll via 5-day Sentinel-2 space diagnostics.")
                 
                 ndvi_vals = [0.2, 0.45, 0.68, 0.75, 0.62] if result.get('crop','') != "Coffee" else [0.65, 0.68, 0.70, 0.67, 0.69]
-                time_points = ["Land Prep", "Early Growth", "Peak Vegetative", "Flowering", "Maturation"]
+                if lang_choice == 'English':
+                    time_points = ["1. Land Prep", "2. Early Growth", "3. Peak Vegetative", "4. Flowering", "5. Maturation"]
+                else:
+                    time_points = ["1. Matayarisho", "2. Ukuaji wa Mapema", "3. Ukuaji Mkubwa", "4. Kuchanua Maua", "5. Kukomaa"]
                 
                 ndvi_df = pd.DataFrame({
                     "Stage": time_points,
