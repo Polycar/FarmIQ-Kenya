@@ -550,8 +550,15 @@ class FarmIQRecommender:
         s_val = soil.get("Sulfur (ppm)", 15.0)
         s_min = reqs.get("s_min", 10.0)
         if s_val < s_min:
-            if lang == "English": advice.append(f"⚠️ **Sulfur Deficiency**: S is low ({s_val:.1f} ppm). Consider Ammonium Sulphate instead of Urea.")
-            else: advice.append(f"⚠️ **Upungufu wa Salfa**: S iko chini ({s_val:.1f} ppm). Tumia Ammonium Sulphate badala ya Urea.")
+            if current_fert == "Urea":
+                if lang == "English": advice.append(f"⚠️ **Sulfur Deficiency**: S is low ({s_val:.1f} ppm). Switch from Urea to Ammonium Sulphate to supply vital sulfur.")
+                else: advice.append(f"⚠️ **Upungufu wa Salfa**: S iko chini ({s_val:.1f} ppm). Badili kutoka Urea hadi Ammonium Sulphate.")
+            elif "None" not in str(current_fert):
+                if lang == "English": advice.append(f"⚠️ **Sulfur Deficiency**: S is low ({s_val:.1f} ppm). Consider supplementing with Ammonium Sulphate instead of standard top-dress.")
+                else: advice.append(f"⚠️ **Upungufu wa Salfa**: S iko chini ({s_val:.1f} ppm). Ongeza Ammonium Sulphate.")
+            else:
+                if lang == "English": advice.append(f"⚠️ **Sulfur Deficiency**: S is low ({s_val:.1f} ppm). Choose a sulfur-enriched fertilizer option.")
+                else: advice.append(f"⚠️ **Upungufu wa Salfa**: S iko chini ({s_val:.1f} ppm). Tumia mbolea yenye salfa.")
         else:
             if lang == "English": advice.append(f"✅ **Sulfur**: Sufficient ({s_val:.1f} ppm).")
             else: advice.append(f"✅ **Salfa**: Inatosha ({s_val:.1f} ppm).")
