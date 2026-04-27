@@ -630,8 +630,14 @@ with tab_doctor:
                     with st.spinner("Consulting digital agronomist..."):
                         response = None
                         error_msg = ""
-                        # Priority candidates for multimodal analysis
-                        candidates = ["gemini-1.5-flash-latest", "gemini-2.0-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro-latest"]
+                        # Dynamically discover available models on this specific SDK version
+                        try:
+                            candidates = []
+                            for m in genai.list_models():
+                                if 'generateContent' in m.supported_generation_methods:
+                                    candidates.append(m.name)
+                        except Exception:
+                            candidates = ["gemini-2.0-flash", "gemini-1.5-flash", "models/gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-pro-vision"]
                         
                         for model_name in candidates:
                             try:
