@@ -179,9 +179,10 @@ with tab_farmer:
     st.markdown('<div class="hero-card"><h1>🌱 FarmIQ</h1><p>National Precision Agriculture Platform</p></div>', unsafe_allow_html=True)
     st.markdown(f"### 📍 {t['title']}")
 
-    loc_mode = st.selectbox("Location Mode",
+    loc_mode = st.radio("Location Mode",
         ["📡 GPS Precision (30m)", "🗺️ Select Region (No GPS)"],
         index=1,
+        horizontal=True,
         label_visibility="collapsed")
     use_gps  = loc_mode.startswith("📡")
     lab_mode = st.toggle("🧪 I have a soil lab report")
