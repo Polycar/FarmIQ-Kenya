@@ -486,6 +486,54 @@ with tab_farmer:
                 st.markdown(f'<div style="background:#333;color:#fff;padding:1.5rem;border-radius:20px;border:4px solid #555;max-width:300px;margin:1rem auto;font-family:monospace;"><div style="text-align:center;font-size:.7em;margin-bottom:12px;color:#888;font-weight:bold;">NOKIA 3310</div><div style="background:#c9d6c9;color:#000;padding:12px;border-radius:5px;font-size:.9em;min-height:100px;border:1px solid #999;">{sms}</div></div>', unsafe_allow_html=True)
                 if st.button("Close", key="close_sms"): st.session_state.show_sms = False; st.rerun()
 
+            # Interactive Advice Chatbot
+            if "advice_chat" not in st.session_state:
+                st.session_state.advice_chat = []
+                
+            st.markdown("---")
+            st.markdown("### 💬 Ask About Your Recommendations")
+            st.markdown("Have questions about this diagnostic report? Chat with the FarmIQ agronomist:")
+            
+            for msg in st.session_state.advice_chat:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+                    
+            c3, c4 = st.columns([4, 1])
+            with c3:
+                user_query_advice = st.text_input("Ask follow-up advice questions:", placeholder="Application rates, scheduling...", key="adv_query")
+            with c4:
+                st.markdown("<br>", unsafe_allow_html=True)
+                send_btn_adv = st.button("💬 Send", use_container_width=True, key="adv_send")
+                
+            if user_query_advice and send_btn_adv:
+                st.session_state.advice_chat.append({"role": "user", "content": user_query_advice})
+                with st.chat_message("user"):
+                    st.markdown(user_query_advice)
+                    
+                with st.spinner("Consulting digital agronomist..."):
+                    import google.generativeai as genai
+                    api_key = st.secrets.get("GEMINI_API_KEY")
+                    if api_key:
+                        genai.configure(api_key=api_key)
+                        history_context = f"Initial Recommendations Result Outline:\n{str(result)}\n\nConversation:\n"
+                        for m in st.session_state.advice_chat:
+                            history_context += f"{m['role'].capitalize()}: {m['content']}\n"
+                            
+                        try:
+                            model = genai.GenerativeModel('gemini-1.5-flash')
+                            chat_res = model.generate_content(history_context)
+                            bot_reply = chat_res.text
+                        except Exception:
+                            try:
+                                model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                                chat_res = model.generate_content(history_context)
+                                bot_reply = chat_res.text
+                            except Exception as e:
+                                bot_reply = "⚠️ Operational data quota exhausted. Please try asking later."
+                                
+                        st.session_state.advice_chat.append({"role": "assistant", "content": bot_reply})
+                        st.rerun()
+
             st.divider()
             st.markdown('<div style="text-align:center;color:#94a3b8;font-size:.75rem;">📊 iSDAsoil (2021) 30m | 🧪 Kenyan Agronomic Baselines | 🌍 FarmIQ Kenya</div>', unsafe_allow_html=True)
 
@@ -678,9 +726,14 @@ with tab_doctor:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
                 
-        user_query = st.chat_input("Ask follow-up questions (e.g. organic alternatives, suppliers)")
-        
-        if user_query:
+        c1, c2 = st.columns([4, 1])
+        with c1:
+            user_query = st.text_input("Ask follow-up questions:", placeholder="Organic options, suppliers...", key="doc_query")
+        with c2:
+            st.markdown("<br>", unsafe_allow_html=True)
+            send_btn = st.button("💬 Send", use_container_width=True, key="doc_send")
+            
+        if user_query and send_btn:
             st.session_state.doctor_chat.append({"role": "user", "content": user_query})
             with st.chat_message("user"):
                 st.markdown(user_query)
