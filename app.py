@@ -523,7 +523,20 @@ with tab_doctor:
     st.markdown('<div class="hero-card"><h1>📸 Plant Doctor</h1><p>AI Pest & Disease Diagnostics</p></div>', unsafe_allow_html=True)
     st.markdown("Snap a photo of a sick plant leaf or stem to get instant localized troubleshooting advice.")
     
-    cam_img = st.camera_input("Take a picture of the plant")
+    if "start_scan" not in st.session_state:
+        st.session_state.start_scan = False
+        
+    cam_img = None
+    if not st.session_state.start_scan:
+        if st.button("📸 Open Camera to Scan", type="primary", use_container_width=True):
+            st.session_state.start_scan = True
+            st.rerun()
+    else:
+        cam_img = st.camera_input("Take a picture of the plant")
+        if st.button("❌ Close Camera", use_container_width=True):
+            st.session_state.start_scan = False
+            st.rerun()
+            
     uploaded_img = st.file_uploader("Or upload a photo from your gallery", type=["jpg", "png", "jpeg"])
     
     target_img = cam_img or uploaded_img
