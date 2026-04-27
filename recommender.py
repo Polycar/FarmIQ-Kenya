@@ -18,6 +18,7 @@ def _fetch_isda_data(lat, lon, token):
         "sulphur_extractable",
         "calcium_extractable",
         "magnesium_extractable",
+        "cation_exchange_capacity",
         "texture_class"
     ]
 
@@ -255,6 +256,8 @@ class FarmIQRecommender:
                     soil["Calcium (ppm)"] = isda_data["calcium_extractable"]
                 if "magnesium_extractable" in isda_data:
                     soil["Magnesium (ppm)"] = isda_data["magnesium_extractable"]
+                if "cation_exchange_capacity" in isda_data:
+                    soil["CEC (meq/100g)"] = isda_data["cation_exchange_capacity"]
                 if "texture_class" in isda_data:
                     soil["Texture"] = isda_data["texture_class"]
                 
@@ -573,6 +576,16 @@ class FarmIQRecommender:
             oc_status = "Good" if oc_val > 15 else "Low"
             if lang == "English": advice.append(f"{'✅' if oc_status=='Good' else '⚠️'} **Organic Carbon**: {oc_status} ({oc_val:.1f} g/kg). {'Encourage composting.' if oc_status=='Low' else ''}")
             else: advice.append(f"{'✅' if oc_status=='Good' else '⚠️'} **Kaboni Hai**: {oc_val:.1f} g/kg.")
+
+        # 7c. Cation Exchange Capacity (CEC)
+        cec_val = soil.get("CEC (meq/100g)")
+        if cec_val is not None:
+            if cec_val < 12.0:
+                if lang == "English": advice.append(f"⚠️ **Low Nutrient Retention (CEC)**: {cec_val:.1f} meq/100g. Soil cannot hold high doses. Apply split, smaller fertilizer portions to prevent leaching.")
+                else: advice.append(f"⚠️ **Uwezo mdogo wa kuhifadhi mbolea (CEC)**: {cec_val:.1f} meq/100g. Weka mbolea kwa awamu ndogo ndogo.")
+            else:
+                if lang == "English": advice.append(f"✅ **CEC (Retention)**: Good capacity ({cec_val:.1f} meq/100g).")
+                else: advice.append(f"✅ **CEC**: Uwezo mzuri wa kuhifadhi virutubisho ({cec_val:.1f} meq/100g).")
 
         # 8. Texture Context
         texture = soil.get("Texture")
