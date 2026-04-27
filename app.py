@@ -60,6 +60,19 @@ div[data-testid="stCameraInput"] button, div[data-testid="stCameraInput"] button
     color: #ffffff !important;
 }
 
+/* Force light theme for file uploader */
+div[data-testid="stFileUploader"] section {
+    background-color: #f1f5f9 !important;
+    border: 2px dashed #cbd5e1 !important;
+}
+div[data-testid="stFileUploader"] section * {
+    color: #0f172a !important;
+}
+div[data-testid="stFileUploader"] button {
+    background-color: #16a34a !important;
+    color: #ffffff !important;
+}
+
 /* Dropdown popovers (render outside .stApp) */
 div[data-baseweb="popover"] ul {
     background-color: #ffffff !important;
