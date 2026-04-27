@@ -480,21 +480,21 @@ with tab_farmer:
 
             with st.expander("🚜 Local Support & Actions", expanded=False):
                 dealers = get_dealers_by_county(selected_county)
-                with st.expander(f"📍 {t['dealers_title']}"):
-                    cur_lat = st.session_state.get("lat")
-                    cur_lon = st.session_state.get("lon")
-                    if not cur_lat or cur_lat == 0.0:
-                        cur_lat, cur_lon = get_county_coordinates(selected_county)
-                    if cur_lat and cur_lat != 0.0:
-                        gps_url = f"https://www.google.com/maps/search/Agrovet+Fertilizer/@{cur_lat},{cur_lon},14z"
-                        st.markdown(f'<a href="{gps_url}" target="_blank"><div style="background:#16a34a;color:white;padding:.6rem;border-radius:8px;text-align:center;font-weight:bold;margin-bottom:1rem;">🌍 Find Agrovets Near Me</div></a>', unsafe_allow_html=True)
-                    for d in dealers:
-                        if d["county"] == "All":
-                            st.markdown(f"**{d['name']}** — Available at {selected_county} depot")
-                        else:
-                            st.markdown(f"**{d['name']}** ({d['town']})")
-                            q = urllib.parse.quote_plus(f"{d['name']} {d['town']} Kenya")
-                            st.markdown(f'<a href="https://www.google.com/maps/search/?api=1&query={q}" target="_blank"><div style="background:#2563eb;color:white;padding:.4rem 1rem;border-radius:6px;text-align:center;font-size:.85rem;font-weight:bold;width:fit-content;margin-bottom:1rem;">🗺️ View on Map</div></a>', unsafe_allow_html=True)
+                st.markdown(f"### 📍 {t['dealers_title']}")
+                cur_lat = st.session_state.get("lat")
+                cur_lon = st.session_state.get("lon")
+                if not cur_lat or cur_lat == 0.0:
+                    cur_lat, cur_lon = get_county_coordinates(selected_county)
+                if cur_lat and cur_lat != 0.0:
+                    gps_url = f"https://www.google.com/maps/search/Agrovet+Fertilizer/@{cur_lat},{cur_lon},14z"
+                    st.markdown(f'<a href="{gps_url}" target="_blank"><div style="background:#16a34a;color:white;padding:.6rem;border-radius:8px;text-align:center;font-weight:bold;margin-bottom:1rem;">🌍 Find Agrovets Near Me</div></a>', unsafe_allow_html=True)
+                for d in dealers:
+                    if d["county"] == "All":
+                        st.markdown(f"**{d['name']}** — Available at {selected_county} depot")
+                    else:
+                        st.markdown(f"**{d['name']}** ({d['town']})")
+                        q = urllib.parse.quote_plus(f"{d['name']} {d['town']} Kenya")
+                        st.markdown(f'<a href="https://www.google.com/maps/search/?api=1&query={q}" target="_blank"><div style="background:#2563eb;color:white;padding:.4rem 1rem;border-radius:6px;text-align:center;font-size:.85rem;font-weight:bold;width:fit-content;margin-bottom:1rem;">🗺️ View on Map</div></a>', unsafe_allow_html=True)
 
                 st.markdown("### 📤 Share Results")
                 tl    = result.get("timeline", {})
