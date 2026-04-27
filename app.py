@@ -338,27 +338,28 @@ with tab_farmer:
             st.markdown(f'<div style="background:{ds_color};color:white;padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:bold;width:fit-content;margin-bottom:6px;">🧬 {ds}</div>', unsafe_allow_html=True)
             st.caption(f"📡 {result.get('confidence','Moderate')} | {t['mapping_source']} {selected_county}")
 
-            with st.expander("🔬 How is this calculated?"):
-                st.markdown("**iSDAsoil (2021)** — 30m satellite spectral mapping. pH weighted 40% (the gatekeeper). N, P, K, OC weighted 15% each via sigmoid curves.")
+            with st.expander("📊 Soil Analysis & Nutrient Requirements", expanded=True):
+                with st.expander("🔬 How is this calculated?"):
+                    st.markdown("**iSDAsoil (2021)** — 30m satellite spectral mapping. pH weighted 40% (the gatekeeper). N, P, K, OC weighted 15% each via sigmoid curves.")
 
-            # Nutrient chart
-            st.markdown(f"### 📊 {t['chart_title']}")
-            reqs  = result.get("reqs", {"n_min":1.2,"p_min":20,"k_min":150})
-            n_val = result["county_data"]["Total Nitrogen (g/kg)"]
-            p_val = result["county_data"]["Extractable Phosphorus (mg/kg)"]
-            k_val = result["county_data"]["Extractable Potassium (mg/kg)"]
-            chart_df = pd.DataFrame({
-                "Nutrient": t["nutrients"],
-                t["chart_legend_curr"]:   [n_val/reqs["n_min"], p_val/reqs["p_min"], k_val/reqs["k_min"]],
-                t["chart_legend_target"]: [1.0, 1.0, 1.0]
-            }).set_index("Nutrient")
-            st.bar_chart(chart_df, color=["#ef4444","#10b981"])
-            st.caption(f"1.0 = optimal {result['crop']} requirement.")
+                # Nutrient chart
+                st.markdown(f"### 📊 {t['chart_title']}")
+                reqs  = result.get("reqs", {"n_min":1.2,"p_min":20,"k_min":150})
+                n_val = result["county_data"]["Total Nitrogen (g/kg)"]
+                p_val = result["county_data"]["Extractable Phosphorus (mg/kg)"]
+                k_val = result["county_data"]["Extractable Potassium (mg/kg)"]
+                chart_df = pd.DataFrame({
+                    "Nutrient": t["nutrients"],
+                    t["chart_legend_curr"]:   [n_val/reqs["n_min"], p_val/reqs["p_min"], k_val/reqs["k_min"]],
+                    t["chart_legend_target"]: [1.0, 1.0, 1.0]
+                }).set_index("Nutrient")
+                st.bar_chart(chart_df, color=["#ef4444","#10b981"])
+                st.caption(f"1.0 = optimal {result['crop']} requirement.")
 
-            # The Switch
-            st.markdown(f"### 🔄 {t['switch_title']}")
-            comp = result.get("comparison", {})
-            st.markdown(f"""
+                # The Switch
+                st.markdown(f"### 🔄 {t['switch_title']}")
+                comp = result.get("comparison", {})
+                st.markdown(f"""
 <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:1rem;border-radius:8px;font-size:0.88rem;">
 <table style="width:100%;border-collapse:collapse;">
 <tr style="border-bottom:1px solid #e2e8f0;">
@@ -379,145 +380,140 @@ with tab_farmer:
 </table>
 </div>""", unsafe_allow_html=True)
 
-            # Timeline — stacked (mobile friendly)
-            st.markdown("### 📅 3-Month Action Plan")
-            timeline = result.get("timeline")
-            if timeline and isinstance(timeline, dict):
-                st.caption(f"{timeline['season']} — {result['crop']}")
-                st.markdown(f'<div class="step-box"><div class="step-number">Month 1</div><div class="step-action">{timeline["month_1"]}</div></div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="step-box" style="border-color:#10b981;"><div class="step-number">Month 2</div><div class="step-action">{timeline["month_2"]}</div></div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="step-box" style="border-color:#f59e0b;"><div class="step-number">Month 3</div><div class="step-action">{timeline["month_3"]}</div></div>', unsafe_allow_html=True)
+            with st.expander("📅 3-Month Timeline & Inputs", expanded=False):
+                st.markdown("### 📅 3-Month Action Plan")
+                timeline = result.get("timeline")
+                if timeline and isinstance(timeline, dict):
+                    st.caption(f"{timeline['season']} — {result['crop']}")
+                    st.markdown(f'<div class="step-box"><div class="step-number">Month 1</div><div class="step-action">{timeline["month_1"]}</div></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="step-box" style="border-color:#10b981;"><div class="step-number">Month 2</div><div class="step-action">{timeline["month_2"]}</div></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="step-box" style="border-color:#f59e0b;"><div class="step-number">Month 3</div><div class="step-action">{timeline["month_3"]}</div></div>', unsafe_allow_html=True)
 
-            # Seeds
-            if result.get("seeds"):
-                st.markdown(f"### 🧬 {'Certified Seed Varieties' if lang_choice=='English' else 'Mbegu Zilizoidhinishwa'}")
-                st.caption("KALRO & Kenya Seed Company certified varieties.")
-                for sd in result["seeds"]:
-                    with st.expander(f"🏷️ {sd['Variety']} ({sd['Breeder']})"):
-                        st.markdown(f"**Zone:** {sd['Altitude_Zone']} | **Maturity:** {sd['Maturity_Days']} days | **Yield:** {sd['Yield_Bags_Per_Acre']} bags/acre")
-                        st.info(sd["Special_Attributes"])
+                if result.get("seeds"):
+                    st.markdown(f"### 🧬 {'Certified Seed Varieties' if lang_choice=='English' else 'Mbegu Zilizoidhinishwa'}")
+                    st.caption("KALRO & Kenya Seed Company certified varieties.")
+                    for sd in result["seeds"]:
+                        with st.expander(f"🏷️ {sd['Variety']} ({sd['Breeder']})"):
+                            st.markdown(f"**Zone:** {sd['Altitude_Zone']} | **Maturity:** {sd['Maturity_Days']} days | **Yield:** {sd['Yield_Bags_Per_Acre']} bags/acre")
+                            st.info(sd["Special_Attributes"])
 
-            # Shopping list
-            st.markdown("### 🛒 Fertilizer Shopping List")
-            st.caption(f"For **{farm_acres} acres**.")
-            st.metric(t["total_cost"], f"KES {result['budget']['total_budget']:,}")
-            for line in result["budget"]["breakdown"]:
-                if farm_acres < 0.5:
-                    try:
-                        m = re.search(r"(\d+\.?\d*)\s*x", line)
-                        if m:
-                            bags = float(m.group(1))
-                            prefix  = line.split(":")[0] + ": " if ":" in line else ""
-                            product = line.split(" bags ")[-1]
-                            st.markdown(f"- {prefix}**{bags*50:.1f}kg** {product}")
-                        else:
+                st.markdown("### 🛒 Fertilizer Shopping List")
+                st.caption(f"For **{farm_acres} acres**.")
+                st.metric(t["total_cost"], f"KES {result['budget']['total_budget']:,}")
+                for line in result["budget"]["breakdown"]:
+                    if farm_acres < 0.5:
+                        try:
+                            m = re.search(r"(\d+\.?\d*)\s*x", line)
+                            if m:
+                                bags = float(m.group(1))
+                                prefix  = line.split(":")[0] + ": " if ":" in line else ""
+                                product = line.split(" bags ")[-1]
+                                st.markdown(f"- {prefix}**{bags*50:.1f}kg** {product}")
+                            else:
+                                st.markdown(f"- {line}")
+                        except:
                             st.markdown(f"- {line}")
-                    except:
-                        st.markdown(f"- {line}")
-                else:
-                    st.markdown(f"- {line}")
-
-            # Advice
-            st.markdown(f"### 💡 {t['advice_title']}")
-            for item in result["advice"]:
-                clean = item
-                for emoji in ["🚨","❌","⚠️","💡","✅","🚀","🍃","🏔️","🌧️","☀️"]:
-                    if clean.startswith(emoji): clean = clean[len(emoji):].strip(); break
-                if any(x in item for x in ["❌","🚨"]):             st.error(clean,   icon="🚨")
-                elif "⚠️" in item:                                   st.warning(clean, icon="⚠️")
-                elif any(x in item for x in ["💡","🌧️","☀️","🍃","🏔️"]): st.info(clean, icon="💡")
-                else:                                                st.success(clean, icon="✅")
-
-            # Weather — fixed coordinates bug
-            w_lat = st.session_state.get("lat")
-            w_lon = st.session_state.get("lon")
-            if not w_lat or w_lat == 0.0:
-                w_lat, w_lon = get_county_coordinates(selected_county)
-            with st.spinner("Fetching weather..." if lang_choice=="English" else "Inaangalia hali ya hewa..."):
-                weather_advice = get_weather_context(w_lat, w_lon)
-            if weather_advice:
-                result["weather_advice"] = weather_advice
-                st.markdown("### ⛅ 7-Day Weather")
-                clean_w = weather_advice
-                for emoji in ["✅","🌧️","⚠️","⛅"]:
-                    if clean_w.startswith(emoji): clean_w = clean_w[len(emoji):].strip(); break
-                if "✅" in weather_advice:    st.success(clean_w, icon="✅")
-                elif "🌧️" in weather_advice: st.error(clean_w,   icon="🌧️")
-                else:                          st.warning(clean_w, icon="⚠️")
-
-            # NDVI Growth Tracking
-            st.markdown(f"### 🛰️ {'Satellite Growth Monitor (NDVI)' if lang_choice=='English' else 'Ufuatiliaji wa Satellite (NDVI)'}")
-            with st.expander("View Crop Health Insights" if lang_choice=='English' else "Angalia Hali ya Mazao"):
-                st.markdown("**Normalized Difference Vegetation Index (NDVI)** measures the density of live green chlorophyll via 5-day Sentinel-2 space diagnostics.")
-                
-                ndvi_vals = [0.2, 0.45, 0.68, 0.75, 0.62] if result.get('crop','') != "Coffee" else [0.65, 0.68, 0.70, 0.67, 0.69]
-                if lang_choice == 'English':
-                    time_points = ["1. Land Prep", "2. Early Growth", "3. Peak Vegetative", "4. Flowering", "5. Maturation"]
-                else:
-                    time_points = ["1. Matayarisho", "2. Ukuaji wa Mapema", "3. Ukuaji Mkubwa", "4. Kuchanua Maua", "5. Kukomaa"]
-                
-                ndvi_df = pd.DataFrame({
-                    "Stage": time_points,
-                    "NDVI": ndvi_vals
-                }).set_index("Stage")
-                
-                st.line_chart(ndvi_df, color="#16a34a")
-                
-                cur_ndvi = ndvi_vals[2]
-                if cur_ndvi > 0.6:
-                    st.success(f"🟢 **Current NDVI: {cur_ndvi}** — High density vegetative mass. Crop development is on schedule.")
-                else:
-                    st.warning(f"🟡 **Current NDVI: {cur_ndvi}** — Low density detected. Verify irrigation or top-dressing timing.")
-
-            # Crop suitability
-            st.markdown(f"### 🌱 {'Crop Suitability' if lang_choice=='English' else 'Mazao Yanayofaa'}")
-            with st.expander("View Best Crop Matches" if lang_choice=="English" else "Angalia Mazao Bora"):
-                matches = engine.match_crops_to_soil(result, farm_acres=farm_acres, lang=lang_choice)
-                if matches:
-                    for m in matches:
-                        bc = "#16a34a" if m["match_score"]>=85 else "#eab308" if m["match_score"]>=70 else "#f97316"
-                        st.markdown(f"**{m['crop']}** — {m['label']}")
-                        st.markdown(f'<div style="background:#e2e8f0;border-radius:8px;height:10px;margin:4px 0 2px;"><div style="background:{bc};width:{m["match_score"]}%;height:100%;border-radius:8px;"></div></div><div style="display:flex;justify-content:space-between;font-size:.8rem;color:#64748b;margin-bottom:10px;"><span>{m["match_score"]}% match</span><span>KES {m["gross_income"]:,} est.</span></div>', unsafe_allow_html=True)
-                else:
-                    st.info("Load crop economics data to see matches.")
-
-            # Dealers
-            dealers = get_dealers_by_county(selected_county)
-            with st.expander(f"📍 {t['dealers_title']}"):
-                cur_lat = st.session_state.get("lat")
-                cur_lon = st.session_state.get("lon")
-                if not cur_lat or cur_lat == 0.0:
-                    cur_lat, cur_lon = get_county_coordinates(selected_county)
-                if cur_lat and cur_lat != 0.0:
-                    gps_url = f"https://www.google.com/maps/search/Agrovet+Fertilizer/@{cur_lat},{cur_lon},14z"
-                    st.markdown(f'<a href="{gps_url}" target="_blank"><div style="background:#16a34a;color:white;padding:.6rem;border-radius:8px;text-align:center;font-weight:bold;margin-bottom:1rem;">🌍 Find Agrovets Near Me</div></a>', unsafe_allow_html=True)
-                for d in dealers:
-                    if d["county"] == "All":
-                        st.markdown(f"**{d['name']}** — Available at {selected_county} depot")
                     else:
-                        st.markdown(f"**{d['name']}** ({d['town']})")
-                        q = urllib.parse.quote_plus(f"{d['name']} {d['town']} Kenya")
-                        st.markdown(f'<a href="https://www.google.com/maps/search/?api=1&query={q}" target="_blank"><div style="background:#2563eb;color:white;padding:.4rem 1rem;border-radius:6px;text-align:center;font-size:.85rem;font-weight:bold;width:fit-content;margin-bottom:1rem;">🗺️ View on Map</div></a>', unsafe_allow_html=True)
+                        st.markdown(f"- {line}")
 
-            # Share
-            st.markdown("### 📤 Share Results")
-            tl    = result.get("timeline", {})
-            tl_s  = f"M1:{tl.get('month_1','')}\nM2:{tl.get('month_2','')}\nM3:{tl.get('month_3','')}" if isinstance(tl, dict) else ""
-            sh_s  = "\n".join([f"🛒 {l}" for l in result["budget"]["breakdown"]])
-            wa_t  = f"🌱 FarmIQ ({selected_county})\nCrop:{result['crop']}\nScore:{result['health_score']}/100\n\n{sh_s}\nBudget:KES {result['budget']['total_budget']:,}\n\n{tl_s}"
-            st.markdown(f'<a href="https://api.whatsapp.com/send?text={urllib.parse.quote(wa_t)}" target="_blank"><div style="background:#25D366;color:white;padding:.75rem;border-radius:8px;text-align:center;font-weight:bold;margin-bottom:8px;">✅ {t["share"]}</div></a>', unsafe_allow_html=True)
-            st.download_button(
-                label=f"📄 {t['download_pdf']}",
-                data=generate_report_pdf(result, lang_choice),
-                file_name=f"FarmIQ_{selected_county}_{datetime.datetime.now().strftime('%Y%m%d')}.pdf",
-                mime="application/pdf", use_container_width=True, type="primary"
-            )
-            if st.button(t["sms_button"], key="sms_btn", use_container_width=True):
-                st.session_state.show_sms = True
-            if st.session_state.get("show_sms", False):
-                sms = engine.generate_sms_summary(result, lang_choice)
-                st.markdown(f'<div style="background:#333;color:#fff;padding:1.5rem;border-radius:20px;border:4px solid #555;max-width:300px;margin:1rem auto;font-family:monospace;"><div style="text-align:center;font-size:.7em;margin-bottom:12px;color:#888;font-weight:bold;">NOKIA 3310</div><div style="background:#c9d6c9;color:#000;padding:12px;border-radius:5px;font-size:.9em;min-height:100px;border:1px solid #999;">{sms}</div></div>', unsafe_allow_html=True)
-                if st.button("Close", key="close_sms"): st.session_state.show_sms = False; st.rerun()
+            with st.expander("⛅ Weather & Satellite Tracker", expanded=False):
+                w_lat = st.session_state.get("lat")
+                w_lon = st.session_state.get("lon")
+                if not w_lat or w_lat == 0.0:
+                    w_lat, w_lon = get_county_coordinates(selected_county)
+                with st.spinner("Fetching weather..." if lang_choice=="English" else "Inaangalia hali ya hewa..."):
+                    weather_advice = get_weather_context(w_lat, w_lon)
+                if weather_advice:
+                    result["weather_advice"] = weather_advice
+                    st.markdown("### ⛅ 7-Day Weather")
+                    clean_w = weather_advice
+                    for emoji in ["✅","🌧️","⚠️","⛅"]:
+                        if clean_w.startswith(emoji): clean_w = clean_w[len(emoji):].strip(); break
+                    if "✅" in weather_advice:    st.success(clean_w, icon="✅")
+                    elif "🌧️" in weather_advice: st.error(clean_w,   icon="🌧️")
+                    else:                          st.warning(clean_w, icon="⚠️")
+
+                st.markdown(f"### 🛰️ {'Satellite Growth Monitor (NDVI)' if lang_choice=='English' else 'Ufuatiliaji wa Satellite (NDVI)'}")
+                with st.expander("View Crop Health Insights" if lang_choice=='English' else "Angalia Hali ya Mazao"):
+                    st.markdown("**Normalized Difference Vegetation Index (NDVI)** measures the density of live green chlorophyll via 5-day Sentinel-2 space diagnostics.")
+                    
+                    ndvi_vals = [0.2, 0.45, 0.68, 0.75, 0.62] if result.get('crop','') != "Coffee" else [0.65, 0.68, 0.70, 0.67, 0.69]
+                    if lang_choice == 'English':
+                        time_points = ["1. Land Prep", "2. Early Growth", "3. Peak Vegetative", "4. Flowering", "5. Maturation"]
+                    else:
+                        time_points = ["1. Matayarisho", "2. Ukuaji wa Mapema", "3. Ukuaji Mkubwa", "4. Kuchanua Maua", "5. Kukomaa"]
+                    
+                    ndvi_df = pd.DataFrame({
+                        "Stage": time_points,
+                        "NDVI": ndvi_vals
+                    }).set_index("Stage")
+                    
+                    st.line_chart(ndvi_df, color="#16a34a")
+                    
+                    cur_ndvi = ndvi_vals[2]
+                    if cur_ndvi > 0.6:
+                        st.success(f"🟢 **Current NDVI: {cur_ndvi}** — High density vegetative mass. Crop development is on schedule.")
+                    else:
+                        st.warning(f"🟡 **Current NDVI: {cur_ndvi}** — Low density detected. Verify irrigation or top-dressing timing.")
+
+            with st.expander("💡 Crop Matches & Agronomic Advice", expanded=False):
+                st.markdown(f"### 💡 {t['advice_title']}")
+                for item in result["advice"]:
+                    clean = item
+                    for emoji in ["🚨","❌","⚠️","💡","✅","🚀","🍃","🏔️","🌧️","☀️"]:
+                        if clean.startswith(emoji): clean = clean[len(emoji):].strip(); break
+                    if any(x in item for x in ["❌","🚨"]):             st.error(clean,   icon="🚨")
+                    elif "⚠️" in item:                                   st.warning(clean, icon="⚠️")
+                    elif any(x in item for x in ["💡","🌧️","☀️","🍃","🏔️"]): st.info(clean, icon="💡")
+                    else:                                                st.success(clean, icon="✅")
+
+                st.markdown(f"### 🌱 {'Crop Suitability' if lang_choice=='English' else 'Mazao Yanayofaa'}")
+                with st.expander("View Best Crop Matches" if lang_choice=="English" else "Angalia Mazao Bora"):
+                    matches = engine.match_crops_to_soil(result, farm_acres=farm_acres, lang=lang_choice)
+                    if matches:
+                        for m in matches:
+                            bc = "#16a34a" if m["match_score"]>=85 else "#eab308" if m["match_score"]>=70 else "#f97316"
+                            st.markdown(f"**{m['crop']}** — {m['label']}")
+                            st.markdown(f'<div style="background:#e2e8f0;border-radius:8px;height:10px;margin:4px 0 2px;"><div style="background:{bc};width:{m["match_score"]}%;height:100%;border-radius:8px;"></div></div><div style="display:flex;justify-content:space-between;font-size:.8rem;color:#64748b;margin-bottom:10px;"><span>{m["match_score"]}% match</span><span>KES {m["gross_income"]:,} est.</span></div>', unsafe_allow_html=True)
+                    else:
+                        st.info("Load crop economics data to see matches.")
+
+            with st.expander("🚜 Local Support & Actions", expanded=False):
+                dealers = get_dealers_by_county(selected_county)
+                with st.expander(f"📍 {t['dealers_title']}"):
+                    cur_lat = st.session_state.get("lat")
+                    cur_lon = st.session_state.get("lon")
+                    if not cur_lat or cur_lat == 0.0:
+                        cur_lat, cur_lon = get_county_coordinates(selected_county)
+                    if cur_lat and cur_lat != 0.0:
+                        gps_url = f"https://www.google.com/maps/search/Agrovet+Fertilizer/@{cur_lat},{cur_lon},14z"
+                        st.markdown(f'<a href="{gps_url}" target="_blank"><div style="background:#16a34a;color:white;padding:.6rem;border-radius:8px;text-align:center;font-weight:bold;margin-bottom:1rem;">🌍 Find Agrovets Near Me</div></a>', unsafe_allow_html=True)
+                    for d in dealers:
+                        if d["county"] == "All":
+                            st.markdown(f"**{d['name']}** — Available at {selected_county} depot")
+                        else:
+                            st.markdown(f"**{d['name']}** ({d['town']})")
+                            q = urllib.parse.quote_plus(f"{d['name']} {d['town']} Kenya")
+                            st.markdown(f'<a href="https://www.google.com/maps/search/?api=1&query={q}" target="_blank"><div style="background:#2563eb;color:white;padding:.4rem 1rem;border-radius:6px;text-align:center;font-size:.85rem;font-weight:bold;width:fit-content;margin-bottom:1rem;">🗺️ View on Map</div></a>', unsafe_allow_html=True)
+
+                st.markdown("### 📤 Share Results")
+                tl    = result.get("timeline", {})
+                tl_s  = f"M1:{tl.get('month_1','')}\nM2:{tl.get('month_2','')}\nM3:{tl.get('month_3','')}" if isinstance(tl, dict) else ""
+                sh_s  = "\n".join([f"🛒 {l}" for l in result["budget"]["breakdown"]])
+                wa_t  = f"🌱 FarmIQ ({selected_county})\nCrop:{result['crop']}\nScore:{result['health_score']}/100\n\n{sh_s}\nBudget:KES {result['budget']['total_budget']:,}\n\n{tl_s}"
+                st.markdown(f'<a href="https://api.whatsapp.com/send?text={urllib.parse.quote(wa_t)}" target="_blank"><div style="background:#25D366;color:white;padding:.75rem;border-radius:8px;text-align:center;font-weight:bold;margin-bottom:8px;">✅ {t["share"]}</div></a>', unsafe_allow_html=True)
+                st.download_button(
+                    label=f"📄 {t['download_pdf']}",
+                    data=generate_report_pdf(result, lang_choice),
+                    file_name=f"FarmIQ_{selected_county}_{datetime.datetime.now().strftime('%Y%m%d')}.pdf",
+                    mime="application/pdf", use_container_width=True, type="primary"
+                )
+                if st.button(t["sms_button"], key="sms_btn", use_container_width=True):
+                    st.session_state.show_sms = True
+                if st.session_state.get("show_sms", False):
+                    sms = engine.generate_sms_summary(result, lang_choice)
+                    st.markdown(f'<div style="background:#333;color:#fff;padding:1.5rem;border-radius:20px;border:4px solid #555;max-width:300px;margin:1rem auto;font-family:monospace;"><div style="text-align:center;font-size:.7em;margin-bottom:12px;color:#888;font-weight:bold;">NOKIA 3310</div><div style="background:#c9d6c9;color:#000;padding:12px;border-radius:5px;font-size:.9em;min-height:100px;border:1px solid #999;">{sms}</div></div>', unsafe_allow_html=True)
+                    if st.button("Close", key="close_sms"): st.session_state.show_sms = False; st.rerun()
 
             # Interactive Advice Chatbot
             if "advice_chat" not in st.session_state:
