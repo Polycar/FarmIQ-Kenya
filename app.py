@@ -265,8 +265,9 @@ with tab_farmer:
         "Mavuno (Planting)","YaraMila Cereal","SSP / TSP","Manure","None"
     ])
     farm_acres  = st.number_input(t["acres"], min_value=0.25, max_value=500.0, value=1.0, step=0.25)
-    price_basis = st.selectbox("💰 Price Basis",
-                               ["Subsidized (KES 2,500/bag)", "Commercial (Market Rate)"])
+    price_basis = st.radio("💰 Price Basis",
+                           ["Subsidized (KES 2,500/bag)", "Commercial (Market Rate)"],
+                           horizontal=True)
 
     if st.button(t["button"], use_container_width=True, type="primary"):
         if not selected_county:
