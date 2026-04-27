@@ -197,7 +197,6 @@ with tab_farmer:
     # GPS mode
     if use_gps:
         st.markdown("##### 📍 Capture Your Farm Location")
-        st.warning("⚠️ **Security Restriction**: Browsers block GPS access over local insecure links (`http://192.168...`). Switch to **Select Region** above to bypass this fallback block.")
         location = streamlit_geolocation()
         if location and location.get("latitude"):
             st.session_state.lat = round(location["latitude"], 4)
