@@ -394,9 +394,13 @@ class FarmIQRecommender:
         else:
             al_val = soil.get("Aluminium (ppm)", 0)
             status = "Healthy" if lang == "English" else "Hali Sawa"
-            al_status = "Safe" if al_val < 50 else "High"
-            if lang == "English": advice.append(f"✅ **pH & Aluminium**: pH is {status} ({ph_display}). Aluminium is {al_status} ({al_val:.1f} ppm).")
-            else: advice.append(f"✅ **pH na Alumini**: pH iko {status} ({ph_display}). Alumini iko Sawa ({al_val:.1f} ppm).")
+            al_status = "Safe" if (al_val < 50 or ph_val >= 5.5) else "High"
+            if lang == "English": 
+                al_str = "Bound/Inert" if (al_val >= 50 and ph_val >= 5.5) else al_status
+                advice.append(f"✅ **pH & Aluminium**: pH is {status} ({ph_display}). Aluminium is {al_str} ({al_val:.1f} ppm).")
+            else: 
+                al_str = "Salama" if (al_val >= 50 and ph_val >= 5.5) else "Salama" if al_status=="Safe" else "Juu"
+                advice.append(f"✅ **pH na Alumini**: pH iko {status} ({ph_display}). Alumini iko {al_str} ({al_val:.1f} ppm).")
 
         # 4. Stage 1: Basal Calculation (1 mg/kg gap = 1 kg/acre nutrient needed)
         p_val = soil["Extractable Phosphorus (mg/kg)"]
@@ -441,6 +445,9 @@ class FarmIQRecommender:
                 fert_n_analysis = ANALYSIS.get(n_type, {"N": 0.26})["N"]
                 n_bags = (n_gap / (fert_n_analysis * 50)) if fert_n_analysis > 0 else 0
                 
+                if crop == "Maize" and n_bags < 1.0:
+                    n_bags = 1.0
+                
                 if n_bags >= 0.05:
                     qty = n_bags * farm_size_acres
                     if lang == "English":
@@ -456,6 +463,9 @@ class FarmIQRecommender:
             n_gap = max(0, reqs["n_min"] - n_val)
             fert_n_analysis = ANALYSIS.get(n_type, {"N": 0.26})["N"]
             n_bags = (n_gap / (fert_n_analysis * 50)) if fert_n_analysis > 0 else 0
+            
+            if crop == "Maize" and n_bags < 1.0:
+                n_bags = 1.0
         
         if n_bags >= 0.05:
             qty = n_bags * farm_size_acres
