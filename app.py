@@ -595,8 +595,8 @@ with tab_doctor:
                     api_key = st.secrets.get("GEMINI_API_KEY")
                     if not api_key:
                         st.error("⚠️ Gemini API Key not found. Please add `GEMINI_API_KEY` to your Streamlit secrets.")
-                else:
-                    genai.configure(api_key=api_key)
+                    else:
+                        genai.configure(api_key=api_key)
                     image_bytes = target_img.read()
                     pil_image = Image.open(io.BytesIO(image_bytes))
                     
