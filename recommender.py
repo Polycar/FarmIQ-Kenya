@@ -16,6 +16,8 @@ def _fetch_isda_data(lat, lon, token):
         "aluminium_extractable",
         "zinc_extractable",
         "sulphur_extractable",
+        "calcium_extractable",
+        "magnesium_extractable",
         "texture_class"
     ]
 
@@ -244,6 +246,10 @@ class FarmIQRecommender:
                     soil["Zinc (ppm)"] = isda_data["zinc_extractable"]
                 if "sulphur_extractable" in isda_data:
                     soil["Sulfur (ppm)"] = isda_data["sulphur_extractable"]
+                if "calcium_extractable" in isda_data:
+                    soil["Calcium (ppm)"] = isda_data["calcium_extractable"]
+                if "magnesium_extractable" in isda_data:
+                    soil["Magnesium (ppm)"] = isda_data["magnesium_extractable"]
                 if "texture_class" in isda_data:
                     soil["Texture"] = isda_data["texture_class"]
                 
@@ -389,28 +395,41 @@ class FarmIQRecommender:
 
         if is_acidic:
             al_val = soil.get("Aluminium (ppm)", 0)
-            # Formula: Gap * 10 bags/acre
+            mg_val = soil.get("Magnesium (ppm)", 100.0)
+            lime_type = "Dolomitic Lime" if mg_val < 50.0 else "Calcitic Lime"
+            
             gap = reqs["ph_min"] - ph_val
             lime_bags = gap * 10 * farm_size_acres
-            breakdown.append(f"Basal Adj: {lime_bags:.1f} x bags Lime")
-            total_cost += lime_bags * mp.get("Lime", 0)
+            breakdown.append(f"Basal Adj: {lime_bags:.1f} x bags {lime_type}")
+            total_cost += lime_bags * mp.get("Lime", 500)
             
             if al_val > 50:
-                if lang == "English": advice.append(f"🚨 **Aluminium Toxicity Detected**: Al is {al_val:.1f} ppm — actively poisoning roots. pH {ph_display} is too low. Apply {lime_bags:.1f} bags of Lime immediately.")
-                else: advice.append(f"🚨 **Sumu ya Alumini**: Al ni {al_val:.1f} ppm — inaharibu mizizi. pH {ph_display} iko chini. Tumia mifuko {lime_bags:.1f} ya chokaa mara moja.")
+                if lang == "English": advice.append(f"🚨 **Aluminium Toxicity Detected**: Al is {al_val:.1f} ppm — actively poisoning roots. pH {ph_display} is too low. Apply {lime_bags:.1f} bags of {lime_type} immediately.")
+                else: advice.append(f"🚨 **Sumu ya Alumini**: Al ni {al_val:.1f} ppm — inaharibu mizizi. pH {ph_display} iko chini. Tumia mifuko {lime_bags:.1f} ya {lime_type} mara moja.")
             else:
-                if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_display} is too low for {crop}. Apply {lime_bags:.1f} bags of Lime.")
-                else: advice.append(f"🚨 **Asidi Kali**: pH {ph_display} ni ya chini sana kwa {crop}. Tumia mifuko {lime_bags:.1f} ya chokaa.")
+                if lang == "English": advice.append(f"🚨 **Critical Acidity**: pH {ph_display} is too low for {crop}. Apply {lime_bags:.1f} bags of {lime_type}.")
+                else: advice.append(f"🚨 **Asidi Kali**: pH {ph_display} ni ya chini sana kwa {crop}. Tumia mifuko {lime_bags:.1f} ya {lime_type}.")
         else:
             al_val = soil.get("Aluminium (ppm)", 0)
+            ca_val = soil.get("Calcium (ppm)", 1000.0)
             status = "Healthy" if lang == "English" else "Hali Sawa"
             al_status = "Safe" if (al_val < 50 or ph_val >= 5.5) else "High"
             if lang == "English": 
                 al_str = "Bound/Inert" if (al_val >= 50 and ph_val >= 5.5) else al_status
                 advice.append(f"✅ **pH & Aluminium**: pH is {status} ({ph_display}). Aluminium is {al_str} ({al_val:.1f} ppm).")
+                if ca_val < 300.0:
+                    gyp_bags = 2.0 * farm_size_acres
+                    breakdown.append(f"Calcium Supplement: {gyp_bags:.1f} x bags Gypsum")
+                    total_cost += gyp_bags * mp.get("Gypsum", 350)
+                    advice.append(f"⚠️ **Calcium Deficiency**: Ca is low ({ca_val:.1f} ppm). Apply {gyp_bags:.1f} bags of Gypsum to resolve without altering pH.")
             else: 
                 al_str = "Salama" if (al_val >= 50 and ph_val >= 5.5) else "Salama" if al_status=="Safe" else "Juu"
                 advice.append(f"✅ **pH na Alumini**: pH iko {status} ({ph_display}). Alumini iko {al_str} ({al_val:.1f} ppm).")
+                if ca_val < 300.0:
+                    gyp_bags = 2.0 * farm_size_acres
+                    breakdown.append(f"Kalsiamu Nyongeza: {gyp_bags:.1f} x mifuko Gypsum")
+                    total_cost += gyp_bags * mp.get("Gypsum", 350)
+                    advice.append(f"⚠️ **Upungufu wa Kalsiamu**: Ca iko chini ({ca_val:.1f} ppm). Tumia mifuko {gyp_bags:.1f} za Gypsum.")
 
         # 4. Stage 1: Basal Calculation (1 mg/kg gap = 1 kg/acre nutrient needed)
         p_val = soil["Extractable Phosphorus (mg/kg)"]
