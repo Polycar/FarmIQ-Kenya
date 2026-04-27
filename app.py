@@ -296,10 +296,28 @@ with tab_farmer:
     ])
     farm_acres  = st.number_input(t["acres"], min_value=0.25, max_value=500.0, value=1.0, step=0.25)
     
-    # Yield Target Dynamic Modifiers
-    yt_label = "🎯 Yield Goal (1.0x = Baseline)" if lang_choice == "English" else "🎯 Lengo la Mavuno (1.0x = Msingi)"
-    yt_help = "Scale your inputs proportionally to drive higher output requirements."
-    yield_target = st.slider(yt_label, min_value=0.5, max_value=2.0, value=1.0, step=0.1, help=yt_help)
+    # Yield Target Dynamic Modifiers based on crop
+    crop_units = {
+        "Maize": {"unit": "Bags/Acre", "min": 15, "max": 50, "def": 30},
+        "Beans": {"unit": "Bags/Acre", "min": 8, "max": 20, "def": 12},
+        "Potatoes": {"unit": "Bags/Acre", "min": 200, "max": 400, "def": 300},
+        "Tomatoes": {"unit": "Tons/Acre", "min": 10, "max": 30, "def": 15},
+        "Kale (Sukuma)": {"unit": "Tons/Acre", "min": 5, "max": 20, "def": 10},
+        "Wheat": {"unit": "Bags/Acre", "min": 10, "max": 30, "def": 20},
+        "Sorghum": {"unit": "Bags/Acre", "min": 10, "max": 25, "def": 15},
+        "Avocado": {"unit": "Tons/Acre", "min": 5, "max": 15, "def": 10},
+        "Tea": {"unit": "kg/Acre", "min": 1000, "max": 3000, "def": 2000}
+    }
+    
+    cfg = crop_units.get(selected_crop, {"unit": "Multiplier", "min": 0.5, "max": 2.0, "def": 1.0})
+    if cfg["unit"] == "Multiplier":
+        yt_label = "🎯 Yield Goal (1.0x = Baseline)" if lang_choice == "English" else "🎯 Lengo la Mavuno (1.0x = Msingi)"
+        yield_val = st.slider(yt_label, min_value=float(cfg["min"]), max_value=float(cfg["max"]), value=float(cfg["def"]), step=0.1)
+        yield_target = yield_val
+    else:
+        yt_label = f"🎯 Target Yield ({cfg['unit']})" if lang_choice == "English" else f"🎯 Lengo la Mavuno ({cfg['unit']})"
+        yield_val = st.slider(yt_label, min_value=int(cfg["min"]), max_value=int(cfg["max"]), value=int(cfg["def"]), step=1 if cfg["max"]-cfg["min"]<=50 else 10)
+        yield_target = yield_val / cfg["def"]
     
     price_basis = st.radio("💰 Price Basis",
                            ["Subsidized (KES 2,500/bag)", "Commercial (Market Rate)"],
