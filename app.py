@@ -535,6 +535,7 @@ with tab_yield:
 with tab_doctor:
     st.markdown('<div class="hero-card"><h1>📸 Plant Doctor</h1><p>AI Pest & Disease Diagnostics</p></div>', unsafe_allow_html=True)
     st.markdown("Snap a photo of a sick plant leaf or stem to get instant localized troubleshooting advice.")
+    scan_method = st.radio("Analysis Engine", ["🤖 Gemini AI", "🌿 PlantVillage Model"], horizontal=True)
     
     if "start_scan" not in st.session_state:
         st.session_state.start_scan = False
@@ -564,9 +565,36 @@ with tab_doctor:
                 from PIL import Image
                 import io
                 
-                api_key = st.secrets.get("GEMINI_API_KEY")
-                if not api_key:
-                    st.error("⚠️ Gemini API Key not found. Please add `GEMINI_API_KEY` to your Streamlit secrets.")
+                if "PlantVillage" in scan_method:
+                    import requests
+                    API_URL = "https://api-inference.huggingface.co/models/linkan/plant-disease-classifier"
+                    image_bytes = target_img.read()
+                    
+                    with st.spinner("Querying PlantVillage open database..."):
+                        try:
+                            headers = {"Content-Type": "application/octet-stream"}
+                            if st.secrets.get("HF_TOKEN"):
+                                headers["Authorization"] = f"Bearer {st.secrets['HF_TOKEN']}"
+                            
+                            response = requests.post(API_URL, headers=headers, data=image_bytes)
+                            res_json = response.json()
+                            
+                            if isinstance(res_json, list) and len(res_json) > 0:
+                                top_prediction = res_json[0]
+                                label = top_prediction.get("label", "Healthy / Undiagnosed").replace("___", " - ").replace("_", " ")
+                                score = top_prediction.get("score", 0) * 100
+                                
+                                st.markdown(f"### 📋 PlantVillage Diagnosis")
+                                st.success(f"**Predicted Condition:** {label}")
+                                st.info(f"Confidence accuracy: **{score:.2f}%**")
+                            else:
+                                st.error("⚠️ Inference server limit reached. Switch to Gemini AI.")
+                        except Exception as hf_err:
+                            st.error(f"⚠️ PlantVillage access issue: {str(hf_err)}")
+                else:
+                    api_key = st.secrets.get("GEMINI_API_KEY")
+                    if not api_key:
+                        st.error("⚠️ Gemini API Key not found. Please add `GEMINI_API_KEY` to your Streamlit secrets.")
                 else:
                     genai.configure(api_key=api_key)
                     image_bytes = target_img.read()
