@@ -582,16 +582,24 @@ with tab_doctor:
                     """
                     
                     with st.spinner("Consulting digital agronomist..."):
-                        try:
-                            model = genai.GenerativeModel('gemini-2.0-flash')
-                            response = model.generate_content([prompt, pil_image])
-                        except Exception as e2:
-                            if "429" in str(e2) or "quota" in str(e2).lower():
-                                st.info("🔄 Gemini 2.0 quota reached. Re-routing via Gemini 1.5...")
-                                model = genai.GenerativeModel('gemini-1.5-flash')
+                        response = None
+                        error_msg = ""
+                        # Priority candidates for multimodal analysis
+                        candidates = ["gemini-1.5-flash-latest", "gemini-2.0-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro-latest"]
+                        
+                        for model_name in candidates:
+                            try:
+                                model = genai.GenerativeModel(model_name)
                                 response = model.generate_content([prompt, pil_image])
-                            else:
-                                raise e2
+                                if response and response.text:
+                                    break
+                            except Exception as ex:
+                                error_msg = str(ex)
+                                continue
+                                
+                        if not response:
+                            st.error(f"⚠️ All AI processing layers are at max capacity: {error_msg}")
+                            st.stop()
                         
                     st.markdown("### 📋 Diagnosis & Recommendations")
                     st.write(response.text)
