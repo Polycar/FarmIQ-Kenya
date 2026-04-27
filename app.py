@@ -24,6 +24,36 @@ st.set_page_config(
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
+def get_gemini_completion(history_context):
+    import google.generativeai as genai
+    api_key = st.secrets.get("GEMINI_API_KEY")
+    if not api_key:
+        return "⚠️ Gemini API key not configured."
+    genai.configure(api_key=api_key)
+    
+    try:
+        candidates = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                candidates.append(m.name)
+    except Exception:
+        candidates = ["gemini-2.0-flash", "gemini-1.5-flash", "models/gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-pro"]
+        
+    bot_reply = ""
+    for model_name in candidates:
+        try:
+            model = genai.GenerativeModel(model_name)
+            chat_res = model.generate_content(history_context)
+            if chat_res and chat_res.text:
+                bot_reply = chat_res.text
+                break
+        except Exception:
+            continue
+            
+    if not bot_reply:
+        bot_reply = "⚠️ Data access constraints encountered. Please try again."
+    return bot_reply
+
 def load_farmiq_engine():
     try:
         return FarmIQRecommender(DATA_PATH)
@@ -511,28 +541,13 @@ with tab_farmer:
                     st.markdown(user_query_advice)
                     
                 with st.spinner("Consulting digital agronomist..."):
-                    import google.generativeai as genai
-                    api_key = st.secrets.get("GEMINI_API_KEY")
-                    if api_key:
-                        genai.configure(api_key=api_key)
-                        history_context = f"Initial Recommendations Result Outline:\n{str(result)}\n\nConversation:\n"
-                        for m in st.session_state.advice_chat:
-                            history_context += f"{m['role'].capitalize()}: {m['content']}\n"
-                            
-                        try:
-                            model = genai.GenerativeModel('gemini-1.5-flash')
-                            chat_res = model.generate_content(history_context)
-                            bot_reply = chat_res.text
-                        except Exception:
-                            try:
-                                model = genai.GenerativeModel('gemini-1.5-flash-latest')
-                                chat_res = model.generate_content(history_context)
-                                bot_reply = chat_res.text
-                            except Exception as e:
-                                bot_reply = "⚠️ Operational data quota exhausted. Please try asking later."
-                                
-                        st.session_state.advice_chat.append({"role": "assistant", "content": bot_reply})
-                        st.rerun()
+                    history_context = f"Initial Recommendations Result Outline:\n{str(result)}\n\nConversation:\n"
+                    for m in st.session_state.advice_chat:
+                        history_context += f"{m['role'].capitalize()}: {m['content']}\n"
+                        
+                    bot_reply = get_gemini_completion(history_context)
+                    st.session_state.advice_chat.append({"role": "assistant", "content": bot_reply})
+                    st.rerun()
 
             st.divider()
             st.markdown('<div style="text-align:center;color:#94a3b8;font-size:.75rem;">📊 iSDAsoil (2021) 30m | 🧪 Kenyan Agronomic Baselines | 🌍 FarmIQ Kenya</div>', unsafe_allow_html=True)
@@ -739,28 +754,13 @@ with tab_doctor:
                 st.markdown(user_query)
                 
             with st.spinner("Consulting digital agronomist..."):
-                import google.generativeai as genai
-                api_key = st.secrets.get("GEMINI_API_KEY")
-                if api_key:
-                    genai.configure(api_key=api_key)
-                    history_context = f"Initial Diagnosis:\n{st.session_state.doctor_diagnosis}\n\nConversation:\n"
-                    for m in st.session_state.doctor_chat:
-                        history_context += f"{m['role'].capitalize()}: {m['content']}\n"
-                        
-                    try:
-                        model = genai.GenerativeModel('gemini-1.5-flash')
-                        chat_res = model.generate_content(history_context)
-                        bot_reply = chat_res.text
-                    except Exception:
-                        try:
-                            model = genai.GenerativeModel('gemini-1.5-flash-latest')
-                            chat_res = model.generate_content(history_context)
-                            bot_reply = chat_res.text
-                        except Exception as e:
-                            bot_reply = "⚠️ Operational data quota exhausted. Please try asking later."
-                            
-                    st.session_state.doctor_chat.append({"role": "assistant", "content": bot_reply})
-                    st.rerun()
+                history_context = f"Initial Diagnosis:\n{st.session_state.doctor_diagnosis}\n\nConversation:\n"
+                for m in st.session_state.doctor_chat:
+                    history_context += f"{m['role'].capitalize()}: {m['content']}\n"
+                    
+                bot_reply = get_gemini_completion(history_context)
+                st.session_state.doctor_chat.append({"role": "assistant", "content": bot_reply})
+                st.rerun()
 
 
 # ════════════════════════════════════════════════════════════════
