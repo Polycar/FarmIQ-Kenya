@@ -15,6 +15,7 @@ def _fetch_isda_data(lat, lon, token):
         "organic_carbon",
         "aluminium_extractable",
         "zinc_extractable",
+        "sulphur_extractable",
         "texture_class"
     ]
 
@@ -241,6 +242,8 @@ class FarmIQRecommender:
                     soil["Aluminium (ppm)"] = isda_data["aluminium_extractable"]
                 if "zinc_extractable" in isda_data:
                     soil["Zinc (ppm)"] = isda_data["zinc_extractable"]
+                if "sulphur_extractable" in isda_data:
+                    soil["Sulfur (ppm)"] = isda_data["sulphur_extractable"]
                 if "texture_class" in isda_data:
                     soil["Texture"] = isda_data["texture_class"]
                 
@@ -293,19 +296,26 @@ class FarmIQRecommender:
         # 1. Base Strategy (calculated early for action plan)
         ph_val = soil["pH"]
         k_val = soil["Extractable Potassium (mg/kg)"]
+        s_val = soil.get("Sulfur (ppm)", 15.0)
+        s_low = s_val < reqs.get("s_min", 10.0)
         
         if crop == "Tea":
             p_type = "NPK 26:5:5"
             n_type = "SA"
         elif k_val < reqs["k_min"]:
             p_type = "NPK 17:17:17"
+        elif s_low:
+            p_type = "Mavuno" if crop in ["Maize", "Sorghum", "Wheat"] else "NPK 15:15:15+S"
         elif ph_val < 5.5:
             p_type = "Mavuno" if crop in ["Maize", "Sorghum", "Wheat"] else "SSP"
         else:
             p_type = "DAP"
         
         if crop != "Tea":
-            n_type = "CAN" if ph_val < reqs["ph_min"] else "Urea"
+            if s_low:
+                n_type = "Ammonium Sulphate" 
+            else:
+                n_type = "CAN" if ph_val < reqs["ph_min"] else "Urea"
 
         # --- Dynamic Biological Action Plan (Timeline) ---
         # Instead of static, we build this based on the crop's growth rate (Weeks)
@@ -487,6 +497,26 @@ class FarmIQRecommender:
             total_cost += foliar_qty * mp.get("Foliar Feed (1L)", 0)
             if lang == "English": advice.append(f"🍃 **Foliar Tip**: Apply Foliar Feed during flowering/fruiting for maximum quality.")
             else: advice.append(f"🍃 **Kidokezo**: Tumia mbolea ya majani wakati wa kutoa maua/matunda.")
+
+        # 6b. Potassium (K) Advice
+        k_val = soil.get("Extractable Potassium (mg/kg)", 0)
+        k_min = reqs.get("k_min", 150.0)
+        if k_val < k_min:
+            if lang == "English": advice.append(f"⚠️ **Potassium Deficiency**: K is low ({k_val:.1f} mg/kg). Supplement with Muriate of Potash (MOP).")
+            else: advice.append(f"⚠️ **Upungufu wa Potasiamu**: K iko chini ({k_val:.1f} mg/kg). Ongeza mbolea ya MOP.")
+        else:
+            if lang == "English": advice.append(f"✅ **Potassium**: Sufficient ({k_val:.1f} mg/kg).")
+            else: advice.append(f"✅ **Potasiamu**: Inatosha ({k_val:.1f} mg/kg).")
+
+        # 6c. Sulfur (S) Advice
+        s_val = soil.get("Sulfur (ppm)", 15.0)
+        s_min = reqs.get("s_min", 10.0)
+        if s_val < s_min:
+            if lang == "English": advice.append(f"⚠️ **Sulfur Deficiency**: S is low ({s_val:.1f} ppm). Consider Ammonium Sulphate instead of Urea.")
+            else: advice.append(f"⚠️ **Upungufu wa Salfa**: S iko chini ({s_val:.1f} ppm). Tumia Ammonium Sulphate badala ya Urea.")
+        else:
+            if lang == "English": advice.append(f"✅ **Sulfur**: Sufficient ({s_val:.1f} ppm).")
+            else: advice.append(f"✅ **Salfa**: Inatosha ({s_val:.1f} ppm).")
 
         # 7. Zinc Deficiency
         zn_val = soil.get("Zinc (ppm)")
@@ -702,6 +732,12 @@ class FarmIQRecommender:
             
             # 4. Toxicity & Weather Risk
             risk_factor = 1.0
+            
+            # Sulfur penalty for high sulfur requirement crops (e.g. Coffee, Brassicas, Onions)
+            s_val = soil.get("Sulfur (ppm)", 15.0)
+            if s_val < 10.0 and crop in ["Coffee", "Coffee (Arabica)", "Onions", "Cabbages", "Brassicas"]:
+                risk_factor *= 0.8
+                
             if al_val > 40 and ph < 5.5:
                 if crop not in ["Tea", "Potatoes", "Cassava", "Coffee (Arabica)"]: risk_factor *= 0.4
             if rain_val > 120 and "Clay" in texture:
