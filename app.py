@@ -577,7 +577,16 @@ with tab_doctor:
                                 headers["Authorization"] = f"Bearer {st.secrets['HF_TOKEN']}"
                             
                             response = requests.post(API_URL, headers=headers, data=image_bytes)
-                            res_json = response.json()
+                            
+                            if response.status_code == 503:
+                                st.warning("⏳ Server is waking up in the cloud. Please tap Analyze again in 20 seconds.")
+                                st.stop()
+                                
+                            try:
+                                res_json = response.json()
+                            except Exception:
+                                st.error("⚠️ Server provided an unexpected response format. Try again or use Gemini AI.")
+                                st.stop()
                             
                             if isinstance(res_json, list) and len(res_json) > 0:
                                 top_prediction = res_json[0]
