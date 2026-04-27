@@ -656,8 +656,57 @@ with tab_doctor:
                     st.markdown("### 📋 Diagnosis & Recommendations")
                     st.write(response.text)
                     
+                    # Initialize or persist diagnosis state
+                    st.session_state.doctor_diagnosis = response.text
+                    
             except Exception as e:
                 st.error(f"⚠️ An error occurred during analysis: {str(e)}")
+
+    # ════════════════════════════════════════════════════════════════
+    # PLANT DOCTOR FOLLOW-UP CHAT
+    # ════════════════════════════════════════════════════════════════
+    if "doctor_chat" not in st.session_state:
+        st.session_state.doctor_chat = []
+        
+    if "doctor_diagnosis" in st.session_state:
+        st.markdown("---")
+        st.markdown("### 💬 Ask the Plant Doctor")
+        st.markdown("Have questions about this advice? Chat with the digital agronomist below:")
+        
+        for msg in st.session_state.doctor_chat:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+                
+        user_query = st.chat_input("Ask follow-up questions (e.g. organic alternatives, suppliers)")
+        
+        if user_query:
+            st.session_state.doctor_chat.append({"role": "user", "content": user_query})
+            with st.chat_message("user"):
+                st.markdown(user_query)
+                
+            with st.spinner("Consulting digital agronomist..."):
+                import google.generativeai as genai
+                api_key = st.secrets.get("GEMINI_API_KEY")
+                if api_key:
+                    genai.configure(api_key=api_key)
+                    history_context = f"Initial Diagnosis:\n{st.session_state.doctor_diagnosis}\n\nConversation:\n"
+                    for m in st.session_state.doctor_chat:
+                        history_context += f"{m['role'].capitalize()}: {m['content']}\n"
+                        
+                    try:
+                        model = genai.GenerativeModel('gemini-1.5-flash')
+                        chat_res = model.generate_content(history_context)
+                        bot_reply = chat_res.text
+                    except Exception:
+                        try:
+                            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                            chat_res = model.generate_content(history_context)
+                            bot_reply = chat_res.text
+                        except Exception as e:
+                            bot_reply = "⚠️ Operational data quota exhausted. Please try asking later."
+                            
+                    st.session_state.doctor_chat.append({"role": "assistant", "content": bot_reply})
+                    st.rerun()
 
 
 # ════════════════════════════════════════════════════════════════
@@ -689,6 +738,19 @@ if is_officer:
                     edited_df.to_csv(econ_path, index=False)
                     engine.crop_econ = edited_df
                     st.success("✅ Prices updated.")
+                    st.rerun()
+                    
+            st.markdown("---")
+            st.markdown("### 🧪 Fertilizer & Input Pricing")
+            prices_path = os.path.join(BASE_DIR, "data", "prices.csv")
+            if os.path.exists(prices_path):
+                df_prices = pd.read_csv(prices_path)
+                b3, b4 = st.columns([3,1])
+                with b4: save_clicked_f = st.button("💾 Save Inputs", use_container_width=True, type="primary")
+                edited_prices = st.data_editor(df_prices, use_container_width=True, hide_index=True, key="input_editor")
+                if save_clicked_f:
+                    edited_prices.to_csv(prices_path, index=False)
+                    st.success("✅ Input prices updated.")
                     st.rerun()
         else:
             st.info("No queries yet. Dashboard populates once farmers use the platform.")
