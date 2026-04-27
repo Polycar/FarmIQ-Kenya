@@ -295,6 +295,12 @@ with tab_farmer:
         "Mavuno (Planting)","YaraMila Cereal","SSP / TSP","Manure","None"
     ])
     farm_acres  = st.number_input(t["acres"], min_value=0.25, max_value=500.0, value=1.0, step=0.25)
+    
+    # Yield Target Dynamic Modifiers
+    yt_label = "🎯 Yield Goal (1.0x = Baseline)" if lang_choice == "English" else "🎯 Lengo la Mavuno (1.0x = Msingi)"
+    yt_help = "Scale your inputs proportionally to drive higher output requirements."
+    yield_target = st.slider(yt_label, min_value=0.5, max_value=2.0, value=1.0, step=0.1, help=yt_help)
+    
     price_basis = st.radio("💰 Price Basis",
                            ["Subsidized (KES 2,500/bag)", "Commercial (Market Rate)"],
                            horizontal=True)
@@ -311,7 +317,8 @@ with tab_farmer:
                     farm_size_acres=farm_acres, lang=lang_choice,
                     lat=lat, lon=lon,
                     overrides=overrides if lab_mode else None,
-                    price_mode=pm_key, is_subcounty=is_sub
+                    price_mode=pm_key, is_subcounty=is_sub,
+                    yield_target=yield_target
                 )
                 st.session_state.result      = result
                 st.session_state.last_county = selected_county

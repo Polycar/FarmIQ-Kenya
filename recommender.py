@@ -203,7 +203,7 @@ class FarmIQRecommender:
         final_score = (s_ph * 0.4 + s_n * 0.15 + s_p * 0.15 + s_k * 0.15 + s_oc * 0.15) * 100
         return int(np.clip(final_score, 0, 100))
 
-    def generate_recommendation(self, county, crop, current_fert, farm_size_acres=1.0, lang="English", lat=None, lon=None, overrides=None, price_mode="Subsidized", is_subcounty=False):
+    def generate_recommendation(self, county, crop, current_fert, farm_size_acres=1.0, lang="English", lat=None, lon=None, overrides=None, price_mode="Subsidized", is_subcounty=False, yield_target=1.0):
         """Generates localized advice with cost modeling and iSDAsoil fallback"""
         # Ensure we have data for the county
         if county not in self.soil_data["County"].values:
@@ -217,7 +217,12 @@ class FarmIQRecommender:
         if not soil:
             return {"error": "Location data not found." if lang == "English" else "Data ya eneo haijapatikana."}
         
-        reqs = self.crop_reqs.get(crop, self.crop_reqs["Maize"])
+        # Apply yield target scaling securely
+        base_reqs = self.crop_reqs.get(crop, self.crop_reqs["Maize"])
+        reqs = base_reqs.copy()
+        reqs["n_min"] = base_reqs.get("n_min", 0.0) * yield_target
+        reqs["p_min"] = base_reqs.get("p_min", 0.0) * yield_target
+        reqs["k_min"] = base_reqs.get("k_min", 0.0) * yield_target
 
         # High-Resolution Override (3-tier fallback chain)
         data_source = "Regional Baseline (CSV)" if lang == "English" else "Msingi wa Eneo (CSV)"
