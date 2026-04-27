@@ -567,28 +567,39 @@ with tab_doctor:
                 
                 if "PlantVillage" in scan_method:
                     import requests
-                    API_URL = "https://api-inference.huggingface.co/models/linkan/plant-disease-classifier"
+                    candidates = [
+                        "https://api-inference.huggingface.co/models/linkan/plant-disease-classifier",
+                        "https://api-inference.huggingface.co/models/marcus/plantvillage-classifier",
+                        "https://api-inference.huggingface.co/models/shivi/plant-disease-classification"
+                    ]
                     image_bytes = target_img.read()
                     
                     with st.spinner("Querying PlantVillage open database..."):
-                        try:
-                            headers = {"Content-Type": "application/octet-stream"}
-                            if st.secrets.get("HF_TOKEN"):
-                                headers["Authorization"] = f"Bearer {st.secrets['HF_TOKEN']}"
-                            
-                            response = requests.post(API_URL, headers=headers, data=image_bytes)
-                            
-                            if response.status_code == 503:
-                                st.warning("⏳ Server is waking up in the cloud. Please tap Analyze again in 20 seconds.")
-                                st.stop()
-                                
+                        res_json = None
+                        error_log = ""
+                        
+                        for API_URL in candidates:
                             try:
-                                res_json = response.json()
-                            except Exception:
-                                st.error("⚠️ Server provided an unexpected response format. Try again or use Gemini AI.")
-                                st.stop()
+                                headers = {"Content-Type": "application/octet-stream"}
+                                if st.secrets.get("HF_TOKEN"):
+                                    headers["Authorization"] = f"Bearer {st.secrets['HF_TOKEN']}"
+                                    
+                                response = requests.post(API_URL, headers=headers, data=image_bytes, timeout=10)
+                                if response.status_code == 200:
+                                    res_json = response.json()
+                                    if isinstance(res_json, list) and len(res_json) > 0:
+                                        break
+                                elif response.status_code == 503:
+                                    error_log = "⏳ Remote model is loading. Retry shortly."
+                            except Exception as e:
+                                error_log = str(e)
+                                continue
+                                
+                        if not res_json:
+                            st.error(f"⚠️ PlantVillage open models are busy or loading: {error_log}")
+                            st.stop()
                             
-                            if isinstance(res_json, list) and len(res_json) > 0:
+                        if isinstance(res_json, list) and len(res_json) > 0:
                                 top_prediction = res_json[0]
                                 label = top_prediction.get("label", "Healthy / Undiagnosed").replace("___", " - ").replace("_", " ")
                                 score = top_prediction.get("score", 0) * 100
