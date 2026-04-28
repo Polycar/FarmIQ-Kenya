@@ -140,7 +140,7 @@ class FarmIQRecommender:
             if dist < min_dist:
                 min_dist = dist
                 best_county = c
-        return best_county if min_dist < 1.0 else "Unknown"
+        return best_county if best_county else "Unknown"
     
     def get_county_data(self, county_name):
         data = self.soil_data[self.soil_data["County"] == county_name]
