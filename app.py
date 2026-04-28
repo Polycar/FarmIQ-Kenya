@@ -183,8 +183,8 @@ INSIGHTS = {
 # ── Language selector ──
 lc1, lc2 = st.columns([3, 1])
 with lc2:
-    lang_choice = st.selectbox("🌐", ["English", "Kiswahili"],
-                               label_visibility="collapsed", key="lang_select")
+    lang_choice = st.radio("🌐", ["English", "Kiswahili"],
+                           horizontal=True, label_visibility="collapsed", key="lang_select")
 t = LANGS[lang_choice]
 
 # ── Sidebar ──
