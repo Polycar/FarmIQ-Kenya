@@ -140,6 +140,9 @@ class FarmIQRecommender:
             if dist < min_dist:
                 min_dist = dist
                 best_county = c
+        
+        if min_dist > 5.0:
+            return "Outside Kenya"
         return best_county if best_county else "Unknown"
     
     def get_county_data(self, county_name):

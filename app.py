@@ -235,8 +235,12 @@ with tab_farmer:
             lat, lon = st.session_state.lat, st.session_state.lon
             st.success(f"✅ GPS Locked: {lat}, {lon}")
             selected_county = engine.detect_county(lat, lon)
-            st.caption(f"🌍 **{selected_county} County** detected")
-            st.info(INSIGHTS.get(selected_county, "💡 **Precision Active**: 30m satellite mapping enabled."))
+            if selected_county == "Outside Kenya":
+                st.warning("🌍 **Outside Kenya**: Simulating regional conditions using Nairobi baseline for review purposes.")
+                selected_county = "Nairobi"
+            else:
+                st.caption(f"🌍 **{selected_county} County** detected")
+                st.info(INSIGHTS.get(selected_county, "💡 **Precision Active**: 30m satellite mapping enabled."))
         else:
             st.warning("👆 Tap the location button above to capture your GPS coordinates.")
             with st.expander("⌨️ Enter Coordinates Manually"):
@@ -245,7 +249,11 @@ with tab_farmer:
                 if lat != 0.0 or lon != 0.0:
                     st.session_state.lat = lat; st.session_state.lon = lon
                     selected_county = engine.detect_county(lat, lon)
-                    st.caption(f"🌍 **{selected_county} County** detected")
+                    if selected_county == "Outside Kenya":
+                        st.warning("🌍 **Outside Kenya**: Simulating regional conditions using Nairobi baseline for review purposes.")
+                        selected_county = "Nairobi"
+                    else:
+                        st.caption(f"🌍 **{selected_county} County** detected")
 
     # Region mode
     else:
