@@ -1,6 +1,8 @@
 import requests
 import numpy as np
 import os
+import pandas as pd
+import datetime
 
 class SoilDataProvider:
     def get_soil_properties(self, lat, lon):
@@ -80,6 +82,23 @@ class FallbackProvider(SoilDataProvider):
             try:
                 res = provider.get_soil_properties(lat, lon)
                 if res:
+                    try:
+                        cache_path = os.path.join(os.path.dirname(__file__), "data", "satellite_cache.csv")
+                        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+                        
+                        cache_row = {
+                            "timestamp": datetime.datetime.now().isoformat(),
+                            "latitude": lat,
+                            "longitude": lon,
+                            **res
+                        }
+                        df = pd.DataFrame([cache_row])
+                        if not os.path.exists(cache_path):
+                            df.to_csv(cache_path, index=False)
+                        else:
+                            df.to_csv(cache_path, mode='a', header=False, index=False)
+                    except Exception:
+                        pass
                     return res
             except Exception:
                 continue
