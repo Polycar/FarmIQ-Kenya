@@ -795,14 +795,33 @@ if is_officer:
             map_points = []
             for r in records:
                 if r.latitude is not None and r.longitude is not None:
-                    map_points.append({"latitude": float(r.latitude), "longitude": float(r.longitude)})
+                    map_points.append({"lon": float(r.longitude), "lat": float(r.latitude)})
                 elif r.county and r.county in engine.COUNTY_CENTROIDS:
                     coords = engine.COUNTY_CENTROIDS[r.county]
-                    map_points.append({"latitude": float(coords[0]), "longitude": float(coords[1])})
+                    map_points.append({"lon": float(coords[1]), "lat": float(coords[0])})
             
             map_data = pd.DataFrame(map_points)
             if not map_data.empty:
-                st.map(map_data)
+                import pydeck as pdk
+                
+                st.pydeck_chart(pdk.Deck(
+                    map_style='mapbox://styles/mapbox/light-v9',
+                    initial_view_state=pdk.ViewState(
+                        latitude=0.0236,
+                        longitude=37.9062,
+                        zoom=5.5,
+                        pitch=0,
+                    ),
+                    layers=[
+                        pdk.Layer(
+                           'ScatterplotLayer',
+                           data=map_data,
+                           get_position='[lon, lat]',
+                           get_color='[239, 68, 68, 160]',
+                           get_radius=15000,
+                        ),
+                    ],
+                ))
             else:
                 st.caption("GPS pings will render visually as localized coverage maps expand.")
                 
