@@ -683,6 +683,7 @@ class FarmIQRecommender:
             "budget": {"breakdown": breakdown, "total_budget": int(total_cost), "farm_size": farm_size_acres},
             "is_acidic": is_acidic, "is_n_low": is_n_low, "is_p_low": is_p_low, "is_k_low": is_k_low,
             "health_score": health_score, "data_source": data_source, "confidence": confidence,
+            "latitude": lat, "longitude": lon,
             "comparison": {"current": current_fert, "recommended": comp_rec, "current_flaw": reason, "impact": impact_rec, "current_outcome": impact_cur},
             "seeds": seeds
         }

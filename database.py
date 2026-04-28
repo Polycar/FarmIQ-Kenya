@@ -28,6 +28,8 @@ class RecommendationRecord(Base):
     total_budget = Column(Integer)
     recommended_fert = Column(String)
     lang = Column(String)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
 
 class YieldRecord(Base):
     __tablename__ = "yields"
@@ -60,7 +62,9 @@ def save_recommendation(result, farm_acres, lang):
             is_k_low=1 if result.get("is_k_low", False) else 0,
             total_budget=result.get("budget", {}).get("total_budget", 0),
             recommended_fert=primary_rec,
-            lang=lang
+            lang=lang,
+            latitude=result.get("latitude"),
+            longitude=result.get("longitude")
         )
         db.add(record)
         db.commit()

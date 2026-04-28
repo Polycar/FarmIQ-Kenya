@@ -789,6 +789,17 @@ if is_officer:
             
             st.divider()
             
+            # 1b. Geospatial Mapping of Queries
+            st.markdown("#### 🌍 Real-Time Precision Hotspots")
+            records = get_all_records()
+            map_data = pd.DataFrame([{"latitude": r.latitude, "longitude": r.longitude} for r in records if r.latitude and r.longitude])
+            if not map_data.empty:
+                st.map(map_data)
+            else:
+                st.caption("GPS pings will render visually as localized coverage maps expand.")
+                
+            st.divider()
+            
             # 2. Regional Soil Deficit Analytics
             c1, c2 = st.columns([2, 1])
             with c1:
