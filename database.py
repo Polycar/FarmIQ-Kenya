@@ -44,6 +44,19 @@ class YieldRecord(Base):
 # Create tables
 Base.metadata.create_all(bind=engine)
 
+# Ensure dynamic deployment schema upgrades securely
+from sqlalchemy import text
+with engine.connect() as conn:
+    try:
+        conn.execute(text("ALTER TABLE recommendations ADD COLUMN latitude FLOAT;"))
+    except Exception:
+        pass
+    try:
+        conn.execute(text("ALTER TABLE recommendations ADD COLUMN longitude FLOAT;"))
+    except Exception:
+        pass
+    conn.commit()
+
 def save_recommendation(result, farm_acres, lang):
     """Logs a recommendation result to the database."""
     db = SessionLocal()
