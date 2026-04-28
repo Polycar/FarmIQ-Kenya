@@ -191,8 +191,9 @@ class FarmIQRecommender:
         token = self._get_isda_token()
         if not token:
             try:
-                from isda_api import get_precision_soil_data
-                pub = get_precision_soil_data(lat, lon)
+                from soil_providers import FallbackProvider
+                provider = FallbackProvider()
+                pub = provider.get_soil_properties(lat, lon)
                 if pub:
                     return {
                         "ph": pub.get("pH"),
