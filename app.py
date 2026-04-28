@@ -805,7 +805,7 @@ if is_officer:
                 import pydeck as pdk
                 
                 st.pydeck_chart(pdk.Deck(
-                    map_style='mapbox://styles/mapbox/light-v9',
+                    map_style='https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
                     initial_view_state=pdk.ViewState(
                         latitude=0.0236,
                         longitude=37.9062,
