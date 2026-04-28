@@ -187,6 +187,19 @@ class FarmIQRecommender:
 
         token = self._get_isda_token()
         if not token:
+            try:
+                from isda_api import get_precision_soil_data
+                pub = get_precision_soil_data(lat, lon)
+                if pub:
+                    return {
+                        "ph": pub.get("pH"),
+                        "nitrogen_total": pub.get("Total Nitrogen (g/kg)"),
+                        "phosphorus_extractable": pub.get("Extractable Phosphorus (mg/kg)"),
+                        "potassium_extractable": pub.get("Extractable Potassium (mg/kg)"),
+                        "organic_carbon": pub.get("Organic Carbon (g/kg)")
+                    }
+            except Exception:
+                pass
             return None
 
         return _fetch_isda_data(lat, lon, token)

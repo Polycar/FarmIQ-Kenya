@@ -792,7 +792,15 @@ if is_officer:
             # 1b. Geospatial Mapping of Queries
             st.markdown("#### 🌍 Real-Time Precision Hotspots")
             records = get_all_records()
-            map_data = pd.DataFrame([{"latitude": r.latitude, "longitude": r.longitude} for r in records if r.latitude and r.longitude])
+            map_points = []
+            for r in records:
+                if r.latitude is not None and r.longitude is not None:
+                    map_points.append({"latitude": float(r.latitude), "longitude": float(r.longitude)})
+                elif r.county and r.county in engine.COUNTY_CENTROIDS:
+                    coords = engine.COUNTY_CENTROIDS[r.county]
+                    map_points.append({"latitude": float(coords[0]), "longitude": float(coords[1])})
+            
+            map_data = pd.DataFrame(map_points)
             if not map_data.empty:
                 st.map(map_data)
             else:
