@@ -236,8 +236,8 @@ with tab_farmer:
             st.success(f"✅ GPS Locked: {lat}, {lon}")
             selected_county = engine.detect_county(lat, lon)
             if selected_county == "Outside Kenya":
-                st.warning("🌍 **Outside Kenya**: Simulating regional conditions using Nairobi baseline for review purposes.")
-                selected_county = "Nairobi"
+                st.error("🚫 **Access Denied**: Your GPS coordinates sit outside Kenyan borders. Satellite precision pipelines remain restricted.")
+                st.stop()
             else:
                 st.caption(f"🌍 **{selected_county} County** detected")
                 st.info(INSIGHTS.get(selected_county, "💡 **Precision Active**: 30m satellite mapping enabled."))
@@ -250,8 +250,8 @@ with tab_farmer:
                     st.session_state.lat = lat; st.session_state.lon = lon
                     selected_county = engine.detect_county(lat, lon)
                     if selected_county == "Outside Kenya":
-                        st.warning("🌍 **Outside Kenya**: Simulating regional conditions using Nairobi baseline for review purposes.")
-                        selected_county = "Nairobi"
+                        st.error("🚫 **Access Denied**: Manual coordinates sit outside Kenyan borders. Execution blocked.")
+                        st.stop()
                     else:
                         st.caption(f"🌍 **{selected_county} County** detected")
 
