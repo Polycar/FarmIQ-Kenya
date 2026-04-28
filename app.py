@@ -801,6 +801,24 @@ if is_officer:
             
             st.divider()
             
+            # 2b. B2B Supply Chain Demand Forecasting
+            st.markdown("#### 🚚 Supply Chain & Product Demand Forecasting")
+            st.caption("Projecting physical input volumes required based on real-time deficit patterns.")
+            
+            if stats["total_queries"] > 0:
+                n_deficit = stats["soil_health"].get("Nitrogen Deficit", 0)
+                p_deficit = stats["soil_health"].get("Phosphorus Deficit", 0)
+                acidic = stats["soil_health"].get("Acidic", 0)
+                
+                supply_df = pd.DataFrame([
+                    {"Input Blend": "Urea / Ammonium Sulphate", "Projected Demand (Bags)": n_deficit * 5, "Primary Gap Target": "Nitrogen (N)"},
+                    {"Input Blend": "DAP / NPK", "Projected Demand (Bags)": p_deficit * 3, "Primary Gap Target": "Phosphorus (P)"},
+                    {"Input Blend": "Agricultural Lime", "Projected Demand (Tons)": acidic * 2, "Primary Gap Target": "Soil Acidity (pH)"}
+                ]).set_index("Input Blend")
+                st.dataframe(supply_df, use_container_width=True)
+            
+            st.divider()
+            
             # 3. Raw Data Logs
             st.markdown("#### 📋 Real-Time Query Pipeline")
             records = get_all_records()
