@@ -772,43 +772,77 @@ with tab_doctor:
 # ════════════════════════════════════════════════════════════════
 if is_officer:
     with tab_officer:
-        st.title("📊 Extension Dashboard")
+        st.title("📊 Enterprise Analytics Dashboard")
+        st.caption("Strategic data evaluation for input deployment workflows.")
+        
         stats = get_stats()
         if stats:
-            st.metric("Total Queries", stats["total_queries"])
-            st.bar_chart(stats["soil_health"])
+            # 1. KPI Metrics Row
+            m1, m2, m3 = st.columns(3)
+            with m1: st.metric("Total Farmer Queries", stats["total_queries"])
+            with m2: 
+                top_crop = max(stats.get("crop_distribution", {}), key=stats.get("crop_distribution", {}).get) if stats.get("crop_distribution") else "N/A"
+                st.metric("Most Requested Crop", top_crop)
+            with m3:
+                top_county = max(stats.get("county_distribution", {}), key=stats.get("county_distribution", {}).get) if stats.get("county_distribution") else "N/A"
+                st.metric("Active Hotspot", top_county)
+            
+            st.divider()
+            
+            # 2. Regional Soil Deficit Analytics
+            c1, c2 = st.columns([2, 1])
+            with c1:
+                st.markdown("#### 🔬 Nutrient Deficiency Profiles")
+                st.bar_chart(stats["soil_health"], color="#ef4444")
+            with c2:
+                st.markdown("#### 🌾 Crop Shares")
+                crop_df = pd.DataFrame(list(stats.get("crop_distribution", {}).items()), columns=["Crop", "Count"]).set_index("Crop")
+                st.dataframe(crop_df, use_container_width=True)
+            
+            st.divider()
+            
+            # 3. Raw Data Logs
+            st.markdown("#### 📋 Real-Time Query Pipeline")
             records = get_all_records()
-            df = pd.DataFrame([{"Time":r.timestamp.strftime("%Y-%m-%d"),"County":r.county,"Crop":r.crop} for r in records])
-            st.dataframe(df, use_container_width=True)
+            df = pd.DataFrame([{
+                "Date": r.timestamp.strftime("%Y-%m-%d %H:%M"),
+                "County": r.county,
+                "Crop": r.crop,
+                "Current Habits": r.current_fert,
+                "Recommended": r.recommended_fert,
+                "Budget (KES)": r.total_budget
+            } for r in records])
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            
             st.download_button(
-                "📥 Export CSV" if lang_choice=="English" else "📥 Pakua CSV",
+                "📥 Export Secure Data Logs (CSV)",
                 df.to_csv(index=False).encode("utf-8"),
-                "farmiq_data.csv","text/csv", use_container_width=True
+                f"farmiq_b2b_export_{datetime.datetime.now().strftime('%Y%m%d')}.csv",
+                "text/csv", use_container_width=True, type="secondary"
             )
-            st.markdown("---")
-            st.markdown("### 💰 Market Pricing")
-            if not engine.crop_econ.empty:
-                b1, b2 = st.columns([3,1])
-                with b2: save_clicked = st.button("💾 Save", use_container_width=True, type="primary")
-                edited_df = st.data_editor(engine.crop_econ, use_container_width=True, hide_index=True, key="econ_editor")
-                if save_clicked:
-                    econ_path = os.path.join(BASE_DIR,"data","crop_economics.csv")
-                    edited_df.to_csv(econ_path, index=False)
-                    engine.crop_econ = edited_df
-                    st.success("✅ Prices updated.")
-                    st.rerun()
-                    
-            st.markdown("---")
-            st.markdown("### 🧪 Fertilizer & Input Pricing")
-            prices_path = os.path.join(BASE_DIR, "data", "prices.csv")
-            if os.path.exists(prices_path):
-                df_prices = pd.read_csv(prices_path)
-                b3, b4 = st.columns([3,1])
-                with b4: save_clicked_f = st.button("💾 Save Inputs", use_container_width=True, type="primary")
-                edited_prices = st.data_editor(df_prices, use_container_width=True, hide_index=True, key="input_editor")
-                if save_clicked_f:
-                    edited_prices.to_csv(prices_path, index=False)
-                    st.success("✅ Input prices updated.")
-                    st.rerun()
+            
+            st.divider()
+            
+            # 4. Secure Market Pricing Override
+            with st.expander("🔒 Advanced Backend Pricing Control"):
+                st.warning("Authorised deployment only. Ensure values remain numeric.")
+                if not engine.crop_econ.empty:
+                    b1, b2 = st.columns([3,1])
+                    with b2: save_clicked = st.button("💾 Save Updates", use_container_width=True, type="primary", key="save_econ_btn")
+                    edited_df = st.data_editor(engine.crop_econ, use_container_width=True, hide_index=True, key="econ_editor")
+                    if save_clicked:
+                        # Data validation check
+                        try:
+                            for col in ['Seed_Cost_Per_Bag','Fertilizer_Cost_Per_Bag','Market_Price_Per_Bag']:
+                                if col in edited_df.columns:
+                                    pd.to_numeric(edited_df[col])
+                            
+                            econ_path = os.path.join(BASE_DIR,"data","crop_economics.csv")
+                            edited_df.to_csv(econ_path, index=False)
+                            engine.crop_econ = edited_df
+                            st.success("✅ Market economics saved successfully!")
+                            st.rerun()
+                        except ValueError:
+                            st.error("❌ Invalid cost formats detected. Please verify inputs are numeric.")
         else:
-            st.info("No queries yet. Dashboard populates once farmers use the platform.")
+            st.info("Dashboard metrics will populate dynamically as localized assessments scale.")
