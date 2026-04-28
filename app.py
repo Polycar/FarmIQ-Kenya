@@ -191,7 +191,7 @@ t = LANGS[lang_choice]
 with st.sidebar:
     st.markdown("### 🏛️ B2B Access")
     access_input = st.text_input("Officer Access Code", type="password", key="access_input_sidebar")
-    officer_pw   = st.secrets.get("OFFICER_PASSWORD", "OFFICER2026")
+    officer_pw   = st.secrets.get("OFFICER_PASSWORD", "SECRET_UNSET")
     current_code = access_input or st.session_state.get("main_access", "")
     is_officer   = (str(current_code).upper() == officer_pw.upper())
 
