@@ -260,23 +260,29 @@ with tab_farmer:
         sc_path      = os.path.join(BASE_DIR, "data", "subcounties.csv")
         subcounty_df = pd.read_csv(sc_path) if os.path.exists(sc_path) else pd.DataFrame()
         county_list  = sorted(engine.soil_data["County"].unique().tolist())
-        selected_county = st.selectbox(t["county"], ["Select County..."] + county_list)
-        selected_subcounty = None
+        
+        c_loc1, c_loc2 = st.columns(2)
+        with c_loc1:
+            selected_county = st.selectbox(t["county"], ["Select County..."] + county_list)
+        with c_loc2:
+            selected_subcounty = None
+            if selected_county and selected_county != "Select County...":
+                # Auto-load County Baseline coordinates
+                c_lat, c_lon = get_county_coordinates(selected_county)
+                st.session_state.lat, st.session_state.lon = c_lat, c_lon
+                lat, lon = c_lat, c_lon
+                
+                county_sc = subcounty_df[subcounty_df["County"] == selected_county] if not subcounty_df.empty else pd.DataFrame()
+                if not county_sc.empty:
+                    sc_list = ["Whole County Average"] + sorted(county_sc["SubCounty"].tolist())
+                    selected_subcounty = st.selectbox("Select Sub-County (API Precision)", sc_list)
+                    if selected_subcounty != "Whole County Average":
+                        row = county_sc[county_sc["SubCounty"] == selected_subcounty].iloc[0]
+                        lat, lon = float(row["Latitude"]), float(row["Longitude"])
+                        st.session_state.lat, st.session_state.lon = lat, lon
+                        st.success(f"🎯 Sub-County Locked: {selected_subcounty}")
+        
         if selected_county and selected_county != "Select County...":
-            # Auto-load County Baseline coordinates
-            c_lat, c_lon = get_county_coordinates(selected_county)
-            st.session_state.lat, st.session_state.lon = c_lat, c_lon
-            lat, lon = c_lat, c_lon
-            
-            county_sc = subcounty_df[subcounty_df["County"] == selected_county] if not subcounty_df.empty else pd.DataFrame()
-            if not county_sc.empty:
-                sc_list = ["Whole County Average"] + sorted(county_sc["SubCounty"].tolist())
-                selected_subcounty = st.selectbox("Select Sub-County (API Precision)", sc_list)
-                if selected_subcounty != "Whole County Average":
-                    row = county_sc[county_sc["SubCounty"] == selected_subcounty].iloc[0]
-                    lat, lon = float(row["Latitude"]), float(row["Longitude"])
-                    st.session_state.lat, st.session_state.lon = lat, lon
-                    st.success(f"🎯 Sub-County Locked: {selected_subcounty} ({lat:.4f}, {lon:.4f})")
             st.info(f"💡 **Sub-County Precision Active**: Querying iSDAsoil for {selected_subcounty}."
                     if selected_subcounty and selected_subcounty != "Whole County Average"
                     else INSIGHTS.get(selected_county, "💡 **National Coverage**: Analysing regional soil chemistry."))
@@ -297,12 +303,22 @@ with tab_farmer:
 
     st.divider()
 
-    selected_crop = st.selectbox(t["crop"], list(engine.crop_reqs.keys()))
-    selected_fert = st.selectbox(t["fert"], [
-        "DAP (Diammonium Phosphate)","CAN","Urea","NPK 17:17:17",
-        "Mavuno (Planting)","YaraMila Cereal","SSP / TSP","Manure","None"
-    ])
-    farm_acres  = st.number_input(t["acres"], min_value=0.25, max_value=500.0, value=1.0, step=0.25)
+    c1, c2 = st.columns(2)
+    with c1:
+        selected_crop = st.selectbox(t["crop"], list(engine.crop_reqs.keys()))
+    with c2:
+        selected_fert = st.selectbox(t["fert"], [
+            "DAP (Diammonium Phosphate)","CAN","Urea","NPK 17:17:17",
+            "Mavuno (Planting)","YaraMila Cereal","SSP / TSP","Manure","None"
+        ])
+        
+    c3, c4 = st.columns(2)
+    with c3:
+        farm_acres  = st.number_input(t["acres"], min_value=0.25, max_value=500.0, value=1.0, step=0.25)
+    with c4:
+        price_basis = st.radio("💰 Price Basis",
+                               ["Subsidized (KES 2,500/bag)", "Commercial (Market Rate)"],
+                               horizontal=True)
     
     # Yield Target Dynamic Modifiers based on crop
     crop_units = {
