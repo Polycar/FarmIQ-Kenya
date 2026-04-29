@@ -70,17 +70,42 @@ except: ISDA_USER = ISDA_PASS = None
 # ── Mobile-first CSS ──
 st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* Hide Streamlit branding & elements */
 [data-testid="stToolbar"],[data-testid="stDecoration"],[data-testid="stStatusWidget"],
 [data-testid="stConnectionStatus"],[data-testid="stAppDeployButton"],
 [data-testid="collapsedControl"],div[class*="viewerBadge"],
 footer,header,#MainMenu{display:none!important;}
 
-/* Force off-white background for the app & give space for mobile keyboard drop-downs */
-.stApp{background:#f8fafc;font-family:'Inter',sans-serif;padding-bottom: 600px !important;}
+/* Global App Styling */
+.stApp {
+    background: radial-gradient(circle at top left, #f0fdf4, #f8fafc 50%), 
+                radial-gradient(circle at bottom right, #ecfdf5, #f8fafc 50%) !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    padding-bottom: 300px !important;
+}
 
-/* 🚨 CRITICAL: Force dark text to prevent Dark Mode from turning fonts white on white backgrounds */
+/* 🚨 CRITICAL: Dark Text & Premium Typography */
 .stApp, h1, h2, h3, h4, h5, h6, p, label, li, span, div[data-testid="stExpander"] summary, [data-testid="stMetricValue"] {
     color: #0f172a !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+/* Premium Card System */
+.premium-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 24px;
+    padding: 1.75rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.03), 0 10px 10px -5px rgba(0, 0, 0, 0.01);
+    margin-bottom: 1.5rem;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.premium-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 25px 30px -5px rgba(0, 0, 0, 0.06);
 }
 
 /* White text exceptions for designed cards and camera capture */
@@ -90,48 +115,143 @@ div[data-testid="stCameraInput"] button, div[data-testid="stCameraInput"] button
     color: #ffffff !important;
 }
 
+/* Hero Card Overhaul */
+.hero-card {
+    background: linear-gradient(135deg, #064e3b 0%, #059669 50%, #10b981 100%);
+    color: white;
+    padding: 2.5rem 1.5rem;
+    border-radius: 24px;
+    text-align: center;
+    box-shadow: 0 15px 30px -10px rgba(5, 150, 105, 0.4);
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+.hero-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+    transform: rotate(30deg);
+    pointer-events: none;
+}
+.hero-card h1 {
+    margin: 0;
+    font-weight: 800;
+    font-size: 2.5rem;
+    letter-spacing: -0.5px;
+}
+.hero-card p {
+    margin: 0.5rem 0 0;
+    font-size: 1rem;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+/* Score Box Overhaul */
+.score-box {
+    color: white;
+    padding: 1.75rem;
+    border-radius: 20px;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease;
+}
+.score-box:hover {
+    transform: scale(1.02);
+}
+.score-box h1 {
+    margin: 0;
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+.score-box p {
+    margin: 0;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+}
+
+/* Step/Timeline Box Overhaul */
+.step-box {
+    background: white;
+    border-left: 6px solid #3b82f6;
+    padding: 1.25rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1rem;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.step-box:hover {
+    transform: translateX(6px);
+}
+.step-number {
+    font-size: 0.8rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+.step-action {
+    font-size: 1rem;
+    color: #0f172a;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+/* Streamlit Widget Styling (Buttons, Selects, Sliders) */
+div[data-testid="stButton"] button {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+    border-radius: 14px !important;
+    border: none !important;
+    padding: 0.6rem 1.5rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 6px -1px rgba(5, 150, 105, 0.2) !important;
+}
+div[data-testid="stButton"] button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 10px 15px -3px rgba(5, 150, 105, 0.4) !important;
+}
+
+div[data-baseweb="select"] {
+    border-radius: 14px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    transition: all 0.2s ease !important;
+}
+
+div[data-testid="stExpander"] {
+    border-radius: 16px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(8px) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03) !important;
+    margin-bottom: 1.25rem !important;
+    overflow: hidden !important;
+}
+
 /* Force light theme for file uploader */
 div[data-testid="stFileUploader"] section {
-    background-color: #f1f5f9 !important;
+    background-color: rgba(255, 255, 255, 0.8) !important;
     border: 2px dashed #cbd5e1 !important;
-}
-div[data-testid="stFileUploader"] section * {
-    color: #0f172a !important;
-}
-div[data-testid="stFileUploader"] button {
-    background-color: #16a34a !important;
-    color: #ffffff !important;
+    border-radius: 16px !important;
 }
 
-/* Dropdown popovers (render outside .stApp) */
+/* Dropdown popovers */
 div[data-baseweb="popover"] ul {
     background-color: #ffffff !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1) !important;
 }
-div[data-baseweb="popover"] li {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-}
-div[data-baseweb="popover"] li:hover {
-    background-color: #f1f5f9 !important;
-}
-
-.hero-card{background:linear-gradient(135deg,#16a34a,#15803d);color:white;
-  padding:1.5rem 1rem;border-radius:16px;text-align:center;
-  box-shadow:0 10px 15px -3px rgba(0,0,0,0.15);margin-bottom:1.5rem;}
-.hero-card h1{margin:0;font-weight:800;font-size:2rem;}
-.hero-card p{margin:0.25rem 0 0;font-size:0.9rem;opacity:0.9;}
-
-.score-box{color:white;padding:1.25rem;border-radius:12px;text-align:center;margin-bottom:1rem;}
-.score-box h1{margin:0;font-size:3rem;font-weight:800;}
-.score-box p{margin:0;font-weight:700;font-size:0.85rem;letter-spacing:.05em;}
-
-.step-box{background:#f8fafc;border-top:4px solid #3b82f6;padding:12px;
-  border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:.75rem;}
-.step-number{font-size:.75rem;color:#64748b;text-transform:uppercase;
-  letter-spacing:1px;font-weight:700;margin-bottom:4px;}
-.step-action{font-size:.9rem;color:#0f172a;font-weight:600;}
-
-div[data-testid="stButton"] button{border-radius:10px!important;font-weight:600!important;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -393,7 +513,7 @@ with tab_farmer:
                 st.markdown(f"### 🔄 {t['switch_title']}")
                 comp = result.get("comparison", {})
                 st.markdown(f"""
-<div style="background:#f8fafc;border:1px solid #e2e8f0;padding:1rem;border-radius:8px;font-size:0.88rem;">
+<div class="premium-card" style="padding: 1.25rem; font-size: 0.9rem;">
 <table style="width:100%;border-collapse:collapse;">
 <tr style="border-bottom:1px solid #e2e8f0;">
   <th style="text-align:left;padding:6px 4px;">{t['table_feature']}</th>
@@ -485,7 +605,7 @@ with tab_farmer:
                         for m in matches:
                             bc = "#16a34a" if m["match_score"]>=85 else "#eab308" if m["match_score"]>=70 else "#f97316"
                             st.markdown(f"**{m['crop']}** — {m['label']}")
-                            st.markdown(f'<div style="background:#e2e8f0;border-radius:8px;height:10px;margin:4px 0 2px;"><div style="background:{bc};width:{m["match_score"]}%;height:100%;border-radius:8px;"></div></div><div style="display:flex;justify-content:space-between;font-size:.8rem;color:#64748b;margin-bottom:10px;"><span>{m["match_score"]}% match</span><span>KES {m["gross_income"]:,} est.</span></div>', unsafe_allow_html=True)
+                            st.markdown(f'<div style="background:rgba(0,0,0,0.05);border-radius:10px;height:12px;margin:8px 0 4px;overflow:hidden;"><div style="background:linear-gradient(90deg, {bc}, #10b981);width:{m["match_score"]}%;height:100%;border-radius:10px;box-shadow:0 2px 4px rgba(0,0,0,0.1);"></div></div><div style="display:flex;justify-content:space-between;font-size:.8rem;color:#64748b;margin-bottom:10px;"><span>{m["match_score"]}% match</span><span>KES {m["gross_income"]:,} est.</span></div>', unsafe_allow_html=True)
                     else:
                         st.info("Load crop economics data to see matches.")
 
@@ -498,21 +618,21 @@ with tab_farmer:
                     cur_lat, cur_lon = get_county_coordinates(selected_county)
                 if cur_lat and cur_lat != 0.0:
                     gps_url = f"https://www.google.com/maps/search/Agrovet+Fertilizer/@{cur_lat},{cur_lon},14z"
-                    st.markdown(f'<a href="{gps_url}" target="_blank"><div style="background:#16a34a;color:white;padding:.6rem;border-radius:8px;text-align:center;font-weight:bold;margin-bottom:1rem;">🌍 Find Agrovets Near Me</div></a>', unsafe_allow_html=True)
+                    st.markdown(f'<a href="{gps_url}" target="_blank"><div style="background:linear-gradient(135deg, #16a34a, #15803d);color:white;padding:0.75rem;border-radius:12px;text-align:center;font-weight:bold;box-shadow:0 4px 6px rgba(0,0,0,0.1);margin-bottom:1rem;">🌍 Find Agrovets Near Me</div></a>', unsafe_allow_html=True)
                 for d in dealers:
                     if d["county"] == "All":
                         st.markdown(f"**{d['name']}** — Available at {selected_county} depot")
                     else:
                         st.markdown(f"**{d['name']}** ({d['town']})")
                         q = urllib.parse.quote_plus(f"{d['name']} {d['town']} Kenya")
-                        st.markdown(f'<a href="https://www.google.com/maps/search/?api=1&query={q}" target="_blank"><div style="background:#2563eb;color:white;padding:.4rem 1rem;border-radius:6px;text-align:center;font-size:.85rem;font-weight:bold;width:fit-content;margin-bottom:1rem;">🗺️ View on Map</div></a>', unsafe_allow_html=True)
+                        st.markdown(f'<a href="https://www.google.com/maps/search/?api=1&query={q}" target="_blank"><div style="background:linear-gradient(135deg, #2563eb, #1d4ed8);color:white;padding:0.5rem 1.25rem;border-radius:10px;text-align:center;font-size:.85rem;font-weight:bold;width:fit-content;box-shadow:0 4px 6px rgba(0,0,0,0.1);margin-bottom:1rem;">🗺️ View on Map</div></a>', unsafe_allow_html=True)
 
                 st.markdown("### 📤 Share Results")
                 tl    = result.get("timeline", {})
                 tl_s  = f"M1:{tl.get('month_1','')}\nM2:{tl.get('month_2','')}\nM3:{tl.get('month_3','')}" if isinstance(tl, dict) else ""
                 sh_s  = "\n".join([f"🛒 {l}" for l in result["budget"]["breakdown"]])
                 wa_t  = f"🌱 FarmIQ ({selected_county})\nCrop:{result['crop']}\nScore:{result['health_score']}/100\n\n{sh_s}\nBudget:KES {result['budget']['total_budget']:,}\n\n{tl_s}"
-                st.markdown(f'<a href="https://api.whatsapp.com/send?text={urllib.parse.quote(wa_t)}" target="_blank"><div style="background:#25D366;color:white;padding:.75rem;border-radius:8px;text-align:center;font-weight:bold;margin-bottom:8px;">✅ {t["share"]}</div></a>', unsafe_allow_html=True)
+                st.markdown(f'<a href="https://api.whatsapp.com/send?text={urllib.parse.quote(wa_t)}" target="_blank"><div style="background:linear-gradient(135deg, #25D366, #128C7E);color:white;padding:0.75rem;border-radius:12px;text-align:center;font-weight:bold;box-shadow:0 4px 6px rgba(0,0,0,0.15);margin-bottom:8px;">✅ {t["share"]}</div></a>', unsafe_allow_html=True)
                 st.download_button(
                     label=f"📄 {t['download_pdf']}",
                     data=generate_report_pdf(result, lang_choice),
