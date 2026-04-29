@@ -493,6 +493,38 @@ with tab_farmer:
                     elif any(x in item for x in ["💡","🌧️","☀️","🍃","🏔️"]): st.info(clean, icon="💡")
                     else:                                                st.success(clean, icon="✅")
 
+                # ── AI Explainer ──
+                api_key = st.secrets.get("GEMINI_API_KEY")
+                if api_key:
+                    st.markdown("---")
+                    st.markdown("### 🤖 AI Agronomist Explanation")
+                    
+                    soil_data = result.get("county_data", {})
+                    advice_str = "\n".join(result.get('advice', []))
+                    
+                    prompt = f"""
+                    You are an expert agronomist in Kenya. 
+                    The farmer is planting {result.get('crop', 'Unknown')} on {farm_acres} acres.
+                    Soil Data:
+                    - pH: {soil_data.get('pH', 'Unknown')}
+                    - Nitrogen: {soil_data.get('Total Nitrogen (g/kg)', 'Unknown')} g/kg
+                    - Phosphorus: {soil_data.get('Extractable Phosphorus (mg/kg)', 'Unknown')} mg/kg
+                    - Potassium: {soil_data.get('Extractable Potassium (mg/kg)', 'Unknown')} mg/kg
+                    - Organic Carbon: {soil_data.get('Organic Carbon (g/kg)', 'Unknown')} g/kg
+                    
+                    Recommendations given:
+                    {advice_str}
+                    
+                    Explain to the farmer in clear, practical terms WHY these recommendations are important and how they will help maximize yield. 
+                    Keep it direct, empathetic, and avoid overly academic jargon. Format in clean paragraphs.
+                    Language: {'English' if lang_choice=='English' else 'Kiswahili'}
+                    """
+                    
+                    if st.button("💡 Ask AI to Explain This Advice", use_container_width=True):
+                        with st.spinner("AI Agronomist is analyzing..." if lang_choice=='English' else "Mtaalamu wa AI anachambua..."):
+                            explanation = get_gemini_completion(prompt)
+                            st.info(explanation)
+
                 st.markdown(f"### 🌱 {'Crop Suitability' if lang_choice=='English' else 'Mazao Yanayofaa'}")
                 with st.expander("View Best Crop Matches" if lang_choice=="English" else "Angalia Mazao Bora"):
                     matches = engine.match_crops_to_soil(result, farm_acres=farm_acres, lang=lang_choice)
