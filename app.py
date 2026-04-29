@@ -17,7 +17,7 @@ from weather import get_weather_context, get_county_coordinates
 st.set_page_config(
     page_title="FarmIQ Kenya",
     page_icon="🌱",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed"
 )
 
