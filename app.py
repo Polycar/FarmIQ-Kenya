@@ -343,9 +343,7 @@ with tab_farmer:
         yield_val = st.slider(yt_label, min_value=int(cfg["min"]), max_value=int(cfg["max"]), value=int(cfg["def"]), step=1 if cfg["max"]-cfg["min"]<=50 else 10)
         yield_target = yield_val / cfg["def"]
     
-    price_basis = st.radio("💰 Price Basis",
-                           ["Subsidized (KES 2,500/bag)", "Commercial (Market Rate)"],
-                           horizontal=True)
+
 
     if st.button(t["button"], use_container_width=True, type="primary"):
         if not selected_county:
