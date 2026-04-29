@@ -8,11 +8,12 @@ FarmIQ is a scientifically rigorous, data-driven soil intelligence platform desi
 To eliminate regional bias in agricultural advice by providing hyper-localized soil insights and fertilizer recommendations for all 47 Kenyan counties based on 30m-resolution satellite data and "Ground Truth" expert lab overrides.
 
 ## 🔬 Data Integrity & Fallback Architecture
-To ensure scientific credibility even when large satellite rasters are unavailable in low-bandwidth environments, FarmIQ uses a dual-layer data strategy:
+To ensure scientific credibility even when external services encounter outages, FarmIQ utilizes a decoupled, multi-tier fallback data engine:
 
-1. **Layer 1: 30m Precision (Raster)**: If the `kenya_ph.tif` file is present in `data/rasters/`, the app samples hyper-localized 30m resolution data based on target GPS coordinates.
-2. **Layer 2: Regional Baseline (CSV)**: If the high-resolution file is missing, the app gracefully falls back to validated county-level averages from the iSDAsoil dataset.
-3. **Layer 3: Lab Override**: Users can override either layer by inputting actual laboratory soil test results.
+1. **Primary: iSDAsoil API** (30m high-resolution spatial precision).
+2. **Secondary: ISRIC SoilGrids API** (250m resolution global dataset).
+3. **Local Baseline & GeoTIFF Cache**: High-resolution AWS rasters (e.g., `data/rasters/kenya_ph.tif`) paired with regional statistical averages for zero-downtime offline access.
+4. **Expert Lab Overrides**: Allowing physical soil testing overrides securely.
 
 > [!NOTE]
 > The app explicitly labels the **Source of Data** in every generated report to ensure complete transparency for agronomists and funders.
@@ -49,8 +50,15 @@ To ensure scientific credibility even when large satellite rasters are unavailab
    streamlit run app.py
    ```
 
+## 🗺️ Multi-Phase Roadmap
+
+* **Phase 1 (Current):** Offline baseline GeoTIFF caching deployed.
+* **Phase 2 (Next Month):** Migrate architectures to Google Earth Engine (GEE) parameters.
+* **Phase 3 (Month 6):** Execute abstract provider loops securely.
+* **Phase 4 (Month 12):** Collect ground truth vectors via physical farm pilot partnerships.
+
 ## 📈 Scientific Attribution
-Soil chemistry data is sampled from the **iSDAsoil Africa Soil Map (2021)**. Nutrient threshold calculations are based on standard Kenyan Agronomic Baselines.
+Soil chemistry metrics utilize the **iSDAsoil Africa Grid (2021)**. Nutrient threshold calculations reflect Kenyan Agronomic Baselines comfortably.
 
 ---
 *Developed for the future of Kenyan Agriculture.*
