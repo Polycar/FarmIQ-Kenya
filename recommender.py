@@ -127,8 +127,8 @@ class FarmIQRecommender:
         if not self.PRICES["Subsidized"]:
             # Fallback
             self.PRICES = {
-                "Subsidized": {"DAP": 2500, "CAN": 2500, "NPK 17:17:17": 2500, "Urea": 2500, "Lime": 1500, "Mavuno": 2500, "SSP": 2500, "YaraMila Cereal": 3500, "SA": 2500, "TSP": 2800, "Foliar Feed (1L)": 1000},
-                "Commercial": {"DAP": 6500, "CAN": 4500, "NPK 17:17:17": 5600, "Urea": 5500, "Lime": 1800, "Mavuno": 5800, "SSP": 5200, "YaraMila Cereal": 7200, "SA": 4800, "TSP": 6200, "Foliar Feed (1L)": 1400}
+                "Subsidized": {"DAP": 2500, "CAN": 2500, "NPK 17:17:17": 2500, "Urea": 2500, "Lime": 1500, "Mavuno": 2500, "SSP": 2500, "YaraMila Cereal": 3500, "Ammonium Sulphate": 2500, "TSP": 2800, "Foliar Feed (1L)": 1000},
+                "Commercial": {"DAP": 6500, "CAN": 4500, "NPK 17:17:17": 5600, "Urea": 5500, "Lime": 1800, "Mavuno": 5800, "SSP": 5200, "YaraMila Cereal": 7200, "Ammonium Sulphate": 4800, "TSP": 6200, "Foliar Feed (1L)": 1400}
             }
     
     def detect_county(self, lat, lon):
@@ -299,7 +299,7 @@ class FarmIQRecommender:
             "SSP": {"N": 0.0, "P": 0.20, "K": 0.0},
             "YaraMila Cereal": {"N": 0.23, "P": 0.23, "K": 0.0},
             "NPK 26:5:5": {"N": 0.26, "P": 0.05, "K": 0.05},
-            "SA": {"N": 0.21, "P": 0.0, "K": 0.0}
+            "Ammonium Sulphate": {"N": 0.21, "P": 0.0, "K": 0.0}
         }
 
         # --- SCIENTIFIC LOGIC: NUTRIENT GAP CALCULATION ---
@@ -332,7 +332,7 @@ class FarmIQRecommender:
         
         if crop == "Tea":
             p_type = "NPK 26:5:5"
-            n_type = "SA"
+            n_type = "Ammonium Sulphate"
         elif k_val < reqs["k_min"]:
             p_type = "NPK 17:17:17"
         elif s_low:
