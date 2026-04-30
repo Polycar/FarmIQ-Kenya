@@ -16,6 +16,9 @@ def get_county_coordinates(county_name):
 
 
 
+import streamlit as st
+
+@st.cache_data(ttl=10800) # Cache for 3 hours
 def get_weather_context(lat, lon):
     if lat is None or lon is None or (lat == 0.0 and lon == 0.0):
         return None

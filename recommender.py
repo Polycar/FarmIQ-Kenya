@@ -179,8 +179,8 @@ class FarmIQRecommender:
 
     def get_isda_nutrients(self, lat, lon):
         """
-        Fetches real-time soil properties from iSDAsoil API
-        for a given GPS coordinate. Returns technical keys for explicit mapping.
+        Fetches real-time soil properties from iSDAsoil API (30m)
+        with automated fallback to ISRIC/SoilGrids (250m) on failure.
         """
         try:
             lat = float(lat)
@@ -188,25 +188,32 @@ class FarmIQRecommender:
         except (ValueError, TypeError):
             return None
 
+        # TIER 1: iSDA V2 (Authenticated)
         token = self._get_isda_token()
-        if not token:
-            try:
-                from soil_providers import FallbackProvider
-                provider = FallbackProvider()
-                pub = provider.get_soil_properties(lat, lon)
-                if pub:
-                    return {
-                        "ph": pub.get("pH"),
-                        "nitrogen_total": pub.get("Total Nitrogen (g/kg)"),
-                        "phosphorus_extractable": pub.get("Extractable Phosphorus (mg/kg)"),
-                        "potassium_extractable": pub.get("Extractable Potassium (mg/kg)"),
-                        "organic_carbon": pub.get("Organic Carbon (g/kg)")
-                    }
-            except Exception:
-                pass
-            return None
+        if token:
+            res = _fetch_isda_data(lat, lon, token)
+            if res and "ph" in res:
+                return res
 
-        return _fetch_isda_data(lat, lon, token)
+        # TIER 2: ISRIC/SoilGrids (Global Fallback)
+        try:
+            from soil_providers import FallbackProvider
+            provider = FallbackProvider()
+            pub = provider.get_soil_properties(lat, lon)
+            if pub:
+                # Map SoilGrids/iSDAv1 keys to Engine Keys
+                return {
+                    "ph": pub.get("pH"),
+                    "nitrogen_total": pub.get("Total Nitrogen (g/kg)"),
+                    "phosphorus_extractable": pub.get("Extractable Phosphorus (mg/kg)"),
+                    "potassium_extractable": pub.get("Extractable Potassium (mg/kg)"),
+                    "organic_carbon": pub.get("Organic Carbon (g/kg)"),
+                    "data_source_override": "ISRIC/SoilGrids (Global 250m)"
+                }
+        except Exception:
+            pass
+
+        return None
 
     def calculate_health_score(self, soil, reqs):
         """Calculates a scientifically realistic soil quality index (SQI)."""
@@ -278,8 +285,8 @@ class FarmIQRecommender:
                 if "texture_class" in isda_data:
                     soil["Texture"] = isda_data["texture_class"]
                 
-                data_source = "iSDAsoil API (30m Full Spectrum)" if lang == "English" else "API ya iSDAsoil (30m Kamili)"
-                confidence = "Very High 🟢 (All nutrients at 30m via iSDAsoil API)"
+                data_source = isda_data.get("data_source_override", "iSDAsoil API (30m Full Spectrum)") if lang == "English" else isda_data.get("data_source_override", "API ya iSDAsoil (30m Kamili)")
+                confidence = "High 🟢 (Precision Satellite mapping)" if "ISRIC" in data_source else "Very High 🟢 (All nutrients at 30m via iSDAsoil API)"
             
         if overrides:
             for key in ["pH", "Total Nitrogen (g/kg)", "Extractable Phosphorus (mg/kg)", "Extractable Potassium (mg/kg)"]:

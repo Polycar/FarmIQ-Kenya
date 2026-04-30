@@ -25,6 +25,7 @@ st.set_page_config(
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
+@st.cache_data(ttl=7200) # Cache for 2 hours
 def get_gemini_completion(history_context):
     import google.generativeai as genai
     api_key = st.secrets.get("GEMINI_API_KEY")
