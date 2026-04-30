@@ -208,7 +208,7 @@ else:
 # TAB 1 — FARMER ADVICE
 # ════════════════════════════════════════════════════════════════
 with tab_farmer:
-    st.markdown('<div class="hero-card"><h1>🌱 FarmIQ</h1><p>National Precision Agriculture Platform</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero-card"><h1>🌱 FarmIQ</h1><p>National Precision Agriculture Platform v1.1.2-ISRIC</p></div>', unsafe_allow_html=True)
     st.markdown(f"### 📍 {t['title']}")
 
     loc_mode = st.radio("Location Mode",
