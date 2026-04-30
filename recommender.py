@@ -179,8 +179,8 @@ class FarmIQRecommender:
 
     def get_isda_nutrients(self, lat, lon):
         """
-        Fetches real-time soil properties from iSDAsoil API (30m)
-        with automated fallback to ISRIC/SoilGrids (250m) on failure.
+        Fetches real-time soil properties.
+        PRIORITY: ISRIC/SoilGrids (for verification) -> iSDA fallback.
         """
         try:
             lat = float(lat)
@@ -188,20 +188,15 @@ class FarmIQRecommender:
         except (ValueError, TypeError):
             return None
 
-        # TIER 1: iSDA V2 (Authenticated)
-        token = self._get_isda_token()
-        if token:
-            res = _fetch_isda_data(lat, lon, token)
-            if res and "ph" in res:
-                return res
-
-        # TIER 2: ISRIC/SoilGrids (Global Fallback)
+        # TIER 1: ISRIC/SoilGrids (Now Primary for Verification)
         try:
             from soil_providers import FallbackProvider
             provider = FallbackProvider()
-            pub = provider.get_soil_properties(lat, lon)
+            # Explicitly use SoilGridsProvider if we want to ensure ISRIC
+            from soil_providers import SoilGridsProvider
+            isric = SoilGridsProvider()
+            pub = isric.get_soil_properties(lat, lon)
             if pub:
-                # Map SoilGrids/iSDAv1 keys to Engine Keys
                 return {
                     "ph": pub.get("pH"),
                     "nitrogen_total": pub.get("Total Nitrogen (g/kg)"),
@@ -212,6 +207,13 @@ class FarmIQRecommender:
                 }
         except Exception:
             pass
+
+        # TIER 2: iSDA V2 (Fallback)
+        token = self._get_isda_token()
+        if token:
+            res = _fetch_isda_data(lat, lon, token)
+            if res and "ph" in res:
+                return res
 
         return None
 
