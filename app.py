@@ -285,7 +285,7 @@ with tab_farmer:
                         st.success(f"🎯 Sub-County Locked: {selected_subcounty}")
         
         if selected_county and selected_county != "Select County...":
-            st.info(f"💡 **Sub-County Precision Active**: Querying iSDAsoil for {selected_subcounty}."
+            st.info(f"💡 **Sub-County Precision Active**: Querying ISRIC/SoilGrids for {selected_subcounty}."
                     if selected_subcounty and selected_subcounty != "Whole County Average"
                     else INSIGHTS.get(selected_county, "💡 **National Coverage**: Analysing regional soil chemistry."))
         elif selected_county == "Select County...":
@@ -389,7 +389,7 @@ with tab_farmer:
 
             with st.expander("📊 Soil Analysis & Nutrient Requirements", expanded=True):
                 with st.expander("🔬 How is this calculated?"):
-                    st.markdown("**iSDAsoil (2021)** — 30m satellite spectral mapping. pH weighted 40% (the gatekeeper). N, P, K, OC weighted 15% each via sigmoid curves.")
+                    st.markdown("**ISRIC SoilGrids / iSDAsoil** — 250m/30m satellite spectral mapping. pH weighted 40% (the gatekeeper). N, P, K, OC weighted 15% each via sigmoid curves.")
 
                 # Nutrient chart
                 st.markdown(f"### 📊 {t['chart_title']}")
