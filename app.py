@@ -608,7 +608,7 @@ with tab_farmer:
                     st.rerun()
 
             st.divider()
-            st.markdown('<div style="text-align:center;color:#94a3b8;font-size:.75rem;">📊 iSDAsoil (2021) 30m | 🧪 Kenyan Agronomic Baselines | 🌍 FarmIQ Kenya</div>', unsafe_allow_html=True)
+            st.markdown('<div style="text-align:center;color:#94a3b8;font-size:.75rem;">📡 ISRIC / iSDAsoil Precision | 🏛️ Kenyan Agronomic Baselines | 🚀 FarmIQ Kenya</div>', unsafe_allow_html=True)
 
     with st.expander("🛠️ Advanced Settings"):
         c_access = st.text_input("Officer Access Code", type="password", key="main_access")
