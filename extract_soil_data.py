@@ -46,7 +46,7 @@ SOIL_PROPERTIES = {
     },
     "nitrogen_total": {
         "url": f"{S3_BASE}/nitrogen_total/nitrogen_total.tif",
-        "label": "Total Nitrogen (mg/kg)",
+        "label": "Total Nitrogen (g/kg)",
         "band": 1,
         "convert": lambda x: x,
     },

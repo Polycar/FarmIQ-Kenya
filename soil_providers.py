@@ -35,12 +35,17 @@ class iSDAProvider(SoilDataProvider):
         raise Exception("iSDA data incomplete")
 
 class SoilGridsProvider(SoilDataProvider):
+    """ISRIC SoilGrids v2.0 provider.
+    Note: SoilGrids does NOT serve extractable P or K.
+    Only pH, total N, SOC, and bulk density are available.
+    P and K must come from iSDA or CSV baseline.
+    """
     def get_soil_properties(self, lat, lon):
         url = "https://rest.isric.org/soilgrids/v2.0/properties/query"
         params = {
             "lat": lat,
             "lon": lon,
-            "property": ["phh2o", "nitrogen", "soc"],
+            "property": ["phh2o", "nitrogen", "soc", "bdod"],
             "depth": "0-30cm",
             "value": "mean"
         }
@@ -53,9 +58,11 @@ class SoilGridsProvider(SoilDataProvider):
                 for layer in props:
                     name = layer.get("name")
                     depths = layer.get("depths", [])
-                    if not depths: continue
+                    if not depths:
+                        continue
                     val = depths[0].get("values", {}).get("mean")
-                    if val is None: continue
+                    if val is None:
+                        continue
                     
                     if name == "phh2o":
                         results["pH"] = float(val) / 10.0
@@ -63,6 +70,8 @@ class SoilGridsProvider(SoilDataProvider):
                         results["Total Nitrogen (g/kg)"] = float(val) / 100.0
                     elif name == "soc":
                         results["Organic Carbon (g/kg)"] = float(val) / 10.0
+                    elif name == "bdod":
+                        results["Bulk Density (kg/dm3)"] = float(val) / 100.0
                 
                 if "pH" in results:
                     return results

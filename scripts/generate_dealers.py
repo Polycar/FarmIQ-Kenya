@@ -1,3 +1,17 @@
+"""
+⚠️ DEPRECATED — DO NOT RUN
+This script was written for an earlier version of FarmIQ that used a hardcoded
+Python dealer list. The current system uses data/dealers.csv with CSV-based
+lookup in dealers.py. Running this script will OVERWRITE dealers.py with an
+incompatible version.
+
+Use data/dealers.csv to add or edit dealers instead.
+"""
+import sys
+print("⚠️  This script is DEPRECATED. Edit data/dealers.csv directly instead.")
+print("    Running this would overwrite the current CSV-based dealers.py.")
+sys.exit(1)
+
 import os
 
 counties = [

@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, JSON
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 import datetime
 import os
 
@@ -138,8 +137,9 @@ def log_yield(farmer_id, crop, season, yield_bags_per_acre):
         )
         db.add(record)
         db.commit()
-    except Exception:
-        pass
+        return True
+    except Exception as e:
+        return str(e)
     finally:
         db.close()
 

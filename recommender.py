@@ -6,7 +6,7 @@ import datetime
 import streamlit as st
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def _fetch_isda_data(lat, lon, token):
+def _fetch_isda_data(lat, lon):
     properties = [
         "nitrogen_total",
         "phosphorus_extractable",
@@ -22,38 +22,33 @@ def _fetch_isda_data(lat, lon, token):
         "texture_class"
     ]
 
-    base_url = "https://api.isda-africa.com/isdasoil/v2/soilproperty"
-    headers = {"Authorization": f"Bearer {token}"}
+    base_url = "https://api.isda-africa.com/v1/soilproperty"
     results = {}
 
     for prop in properties:
         try:
             response = requests.get(
                 base_url,
-                headers=headers,
                 params={
                     "lat": lat,
                     "lon": lon,
                     "property": prop,
-                    "depth": "0-20"
+                    "depth": "0-20cm"
                 },
                 timeout=10
             )
             if response.status_code == 200:
                 data = response.json()
-                prop_data = data.get("property", {}).get(prop, [])
-                if prop_data and len(prop_data) > 0:
-                    value = prop_data[0].get("value", {}).get("value")
-                    if value is not None:
-                        results[prop] = value if isinstance(value, str) else float(value)
-                    
-                    # Extract uncertainty (90% confidence)
-                    uncertainty = prop_data[0].get("uncertainty")
-                    if uncertainty and isinstance(uncertainty, list):
-                        for uc in uncertainty:
-                            if uc.get("confidence_interval") == "90%":
-                                results[f"{prop}_lower"] = uc.get("lower_bound")
-                                results[f"{prop}_upper"] = uc.get("upper_bound")
+                prop_val = data.get("property", {}).get(prop, {}).get("value", {})
+                
+                # Numeric properties usually use "mean"
+                if "mean" in prop_val:
+                    results[prop] = float(prop_val["mean"])
+                elif "value" in prop_val:
+                    # Categorical properties like texture_class
+                    results[prop] = prop_val["value"]
+                elif "class" in prop_val:
+                    results[prop] = prop_val["class"]
         except Exception:
             continue
 
@@ -82,11 +77,9 @@ class FarmIQRecommender:
         if not self.crop_reqs:
             self.crop_reqs = {"Maize": {"ph_min": 5.5, "n_min": 1.2, "p_min": 20, "k_min": 150, "oc_min": 15.0, "foliar": 0, "zn_min": 1.0}}
         
-        # Load Crop Calendars
-        self.crop_calendars = pd.DataFrame()
-        cal_path = os.path.join(self.data_dir, 'crop_calendars.csv')
-        if os.path.exists(cal_path):
-            self.crop_calendars = pd.read_csv(cal_path)
+        # Note: crop_calendars.csv exists in data/ for reference but is not loaded.
+        # The timeline is built dynamically in generate_recommendation() based on
+        # top_dressing rules and crop-specific logic.
 
         # Load Top Dressing Rules
         self.top_dress_rules = pd.DataFrame()
@@ -132,16 +125,22 @@ class FarmIQRecommender:
             }
     
     def detect_county(self, lat, lon):
-        """Finds the nearest county centroid for a given lat/lon."""
+        """Finds the nearest county centroid for a given lat/lon using haversine distance."""
         best_county = None
         min_dist = float('inf')
         for c, coords in self.COUNTY_CENTROIDS.items():
-            dist = np.sqrt((lat - coords[0])**2 + (lon - coords[1])**2)
+            # Haversine formula for accurate geographic distance (km)
+            R = 6371  # Earth radius in km
+            phi1, phi2 = np.radians(lat), np.radians(coords[0])
+            dphi = np.radians(coords[0] - lat)
+            dlambda = np.radians(coords[1] - lon)
+            a = np.sin(dphi / 2)**2 + np.cos(phi1) * np.cos(phi2) * np.sin(dlambda / 2)**2
+            dist = 2 * R * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
             if dist < min_dist:
                 min_dist = dist
                 best_county = c
         
-        if min_dist > 5.0:
+        if min_dist > 200:  # More than 200km from any county centroid
             return "Outside Kenya"
         return best_county if best_county else "Unknown"
     
@@ -150,32 +149,6 @@ class FarmIQRecommender:
         if data.empty:
             return None
         return data.iloc[0].to_dict()
-
-    def _get_isda_token(self):
-        """Authenticate with iSDA API and return a JWT token."""
-        username, password = None, None
-        try:
-            import streamlit as st
-            username = st.secrets["ISDA_USERNAME"]
-            password = st.secrets["ISDA_PASSWORD"]
-        except Exception:
-            username = os.environ.get("ISDA_USERNAME")
-            password = os.environ.get("ISDA_PASSWORD")
-
-        if not username or not password:
-            return None
-
-        try:
-            resp = requests.post(
-                "https://api.isda-africa.com/login",
-                data={"username": username, "password": password},
-                timeout=15
-            )
-            if resp.status_code == 200:
-                return resp.json().get("access_token")
-        except Exception:
-            pass
-        return None
 
     def get_isda_nutrients(self, lat, lon):
         """
@@ -190,9 +163,6 @@ class FarmIQRecommender:
 
         # TIER 1: ISRIC/SoilGrids (Now Primary for Verification)
         try:
-            from soil_providers import FallbackProvider
-            provider = FallbackProvider()
-            # Explicitly use SoilGridsProvider if we want to ensure ISRIC
             from soil_providers import SoilGridsProvider
             isric = SoilGridsProvider()
             pub = isric.get_soil_properties(lat, lon)
@@ -208,12 +178,10 @@ class FarmIQRecommender:
         except Exception:
             pass
 
-        # TIER 2: iSDA V2 (Fallback)
-        token = self._get_isda_token()
-        if token:
-            res = _fetch_isda_data(lat, lon, token)
-            if res and "ph" in res:
-                return res
+        # TIER 2: iSDA V1 (Fallback)
+        res = _fetch_isda_data(lat, lon)
+        if res and "ph" in res:
+            return res
 
         return None
 

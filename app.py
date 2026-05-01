@@ -1,11 +1,10 @@
 import os
-# Force reload for data files
 import re
 import datetime
 import urllib.parse
 import numpy as np
 import pandas as pd
-import requests as _requests
+import requests
 import streamlit as st
 
 try:
@@ -31,8 +30,8 @@ st.set_page_config(
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(BASE_DIR, "data", "kenya_county_soils.csv")
 
-@st.cache_data(ttl=7200) # Cache for 2 hours
 def get_gemini_completion(history_context):
+    """Call Gemini API for AI completion. Not cached because chat history varies per call."""
     import google.generativeai as genai
     api_key = st.secrets.get("GEMINI_API_KEY")
     if not api_key:
@@ -71,9 +70,7 @@ def load_farmiq_engine():
 
 engine = load_farmiq_engine()
 
-# ── Secrets ──
-try:    ISDA_USER = st.secrets["ISDA_USERNAME"]; ISDA_PASS = st.secrets["ISDA_PASSWORD"]
-except: ISDA_USER = ISDA_PASS = None
+# ── Secrets are read directly by recommender.py when needed ──
 
 # ── Mobile-first CSS ──
 st.markdown("""
@@ -230,7 +227,9 @@ with tab_farmer:
         st.session_state.lon = None
     st.session_state.prev_loc_mode = loc_mode
 
-    lat, lon, selected_county = st.session_state.get("lat"), st.session_state.get("lon"), None
+    lat, lon = st.session_state.get("lat"), st.session_state.get("lon")
+    selected_county = None
+    selected_subcounty = None
 
     # GPS mode
     if use_gps:
@@ -359,7 +358,7 @@ with tab_farmer:
         else:
             with st.spinner("Analysing soil data..." if lang_choice == "English" else "Inachambua data ya udongo..."):
                 pm_key = "Subsidized" if "Subsidized" in price_basis else "Commercial"
-                is_sub = (not use_gps and 'selected_subcounty' in dir() and selected_subcounty and selected_subcounty != "Whole County Average")
+                is_sub = (not use_gps and selected_subcounty is not None and selected_subcounty != "Whole County Average")
                 result = engine.generate_recommendation(
                     selected_county, selected_crop, selected_fert,
                     farm_size_acres=farm_acres, lang=lang_choice,
@@ -640,7 +639,7 @@ with tab_farmer:
         c_access = st.text_input("Officer Access Code", type="password", key="main_access")
         if c_access and c_access.upper() == officer_pw.upper() and not is_officer:
             st.rerun()
-        st.info("System Online | Engine v43")
+        st.info("System Online | FarmIQ v1.1.2")
         if is_officer: st.success("✅ Officer Access Granted!")
 
 
@@ -658,19 +657,28 @@ with tab_yield:
             cur_year = datetime.datetime.now().year
             seasons  = [f"{s} {y}" for y in range(cur_year-2, cur_year+1) for s in ["Long Rains","Short Rains"]]
             y_season = st.selectbox("Season", seasons)
-            y_amount = st.number_input("Yield (Bags / Acre)", min_value=0.0, max_value=100.0, step=0.5, value=15.0)
+            # Use crop-specific yield units
+            y_cfg = crop_units.get(y_crop, {"unit": "Bags/Acre", "min": 0, "max": 200, "def": 15})
+            y_unit = y_cfg["unit"]
+            y_amount = st.number_input(f"Yield ({y_unit})", min_value=0.0, max_value=float(y_cfg["max"] * 2), step=0.5, value=float(y_cfg["def"]))
             if st.form_submit_button("💾 Save Harvest", use_container_width=True):
-                log_yield(farmer_id, y_crop, y_season, y_amount)
-                st.success("Harvest logged! 🌾")
+                yield_status = log_yield(farmer_id, y_crop, y_season, y_amount)
+                if yield_status is True:
+                    st.success("Harvest logged! 🌾")
+                else:
+                    st.error(f"⚠️ Failed to save harvest: {yield_status}")
         records = get_farmer_yields(farmer_id)
         if records:
-            df_yields = pd.DataFrame([{"Season":r.season,"Crop":r.crop,"Bags per Acre":r.yield_bags_per_acre} for r in records])
+            df_yields = pd.DataFrame([{"Season":r.season,"Crop":r.crop,"Yield":r.yield_bags_per_acre} for r in records])
             for crop in df_yields["Crop"].unique():
+                c_cfg = crop_units.get(crop, {"unit": "Bags/Acre"})
+                c_unit = c_cfg["unit"]
                 st.markdown(f"#### {crop}")
-                crop_df = df_yields[df_yields["Crop"]==crop]
-                st.bar_chart(data=crop_df, x="Season", y="Bags per Acre", color="#16a34a", height=250)
+                crop_df = df_yields[df_yields["Crop"]==crop].copy()
+                crop_df = crop_df.rename(columns={"Yield": c_unit})
+                st.bar_chart(data=crop_df, x="Season", y=c_unit, color="#16a34a", height=250)
                 if len(crop_df) > 1:
-                    first, last = crop_df.iloc[0]["Bags per Acre"], crop_df.iloc[-1]["Bags per Acre"]
+                    first, last = crop_df.iloc[0][c_unit], crop_df.iloc[-1][c_unit]
                     if first > 0:
                         growth = ((last-first)/first)*100
                         if growth > 0: st.success(f"🚀 {crop} yield up **{growth:.1f}%** since tracking started!")
@@ -971,7 +979,7 @@ if is_officer:
                     if save_clicked:
                         # Data validation check
                         try:
-                            for col in ['Seed_Cost_Per_Bag','Fertilizer_Cost_Per_Bag','Market_Price_Per_Bag']:
+                            for col in ['price_per_kg', 'yield_per_acre']:
                                 if col in edited_df.columns:
                                     pd.to_numeric(edited_df[col])
                             

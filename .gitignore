@@ -4,19 +4,33 @@ __pycache__/
 *$py.class
 .env
 .venv
-
-# Streamlit Secrets (NEVER commit credentials)
-.streamlit/secrets.toml
-.env
-.venv
 env/
 venv/
 ENV/
 
+# Streamlit Secrets (NEVER commit credentials)
+.streamlit/secrets.toml
+
 # Local Data (Excluding large rasters >100MB)
 data/rasters/kenya_ph.tif
+
+# Database files (SQLite)
 *.db
-farmiq.db
+*.db-wal
+*.db-shm
+
+# Large media files
+*.mp4
+*.mov
+*.avi
+
+# Generated PDFs (contain personal/auto-generated content)
+scientific_impact_report.pdf
+outreach_emails_proposals.pdf
+FarmIQ_Development_Documentation.pdf
+
+# Scratch files
+scratch/
 
 # System
 .DS_Store
