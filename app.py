@@ -8,12 +8,18 @@ import pandas as pd
 import requests as _requests
 import streamlit as st
 
-from recommender import FarmIQRecommender
-from report_gen import generate_report_pdf
-from dealers import get_dealers_by_county
-from database import save_recommendation, get_all_records, get_stats, log_yield, get_farmer_yields
-from streamlit_geolocation import streamlit_geolocation
-from weather import get_weather_context, get_county_coordinates
+try:
+    from recommender import FarmIQRecommender
+    from report_gen import generate_report_pdf
+    from dealers import get_dealers_by_county
+    from database import save_recommendation, get_all_records, get_stats, log_yield, get_farmer_yields
+    from streamlit_geolocation import streamlit_geolocation
+    from weather import get_weather_context, get_county_coordinates
+except Exception as e:
+    import streamlit as st
+    st.error(f"❌ **Startup Error**: {str(e)}")
+    st.info("This is likely due to a missing or renamed key in your Streamlit Secrets.")
+    st.stop()
 
 st.set_page_config(
     page_title="FarmIQ Kenya",
