@@ -544,20 +544,35 @@ with tab_farmer:
                         st.info("Load crop economics data to see matches.")
 
             with st.expander("🚜 Local Support & Actions", expanded=False):
-                dealers = get_dealers_by_county(selected_county)
-                st.markdown(f"### 📍 {t['dealers_title']}")
+                # ── Proximity-based Dealer Search ──
+                from dealers import get_dealers_by_proximity, get_dealers_by_county
+                
+                # Get coordinates for the current farm
                 cur_lat = st.session_state.get("lat")
                 cur_lon = st.session_state.get("lon")
                 if not cur_lat or cur_lat == 0.0:
+                    from weather import get_county_coordinates
                     cur_lat, cur_lon = get_county_coordinates(selected_county)
+
+                # Search within 50km first
+                dealers = get_dealers_by_proximity(cur_lat, cur_lon, radius_km=50)
+                
+                # Fallback to county dealers if no proximity data is found
+                if not dealers:
+                    dealers = get_dealers_by_county(selected_county)
+
+                st.markdown(f"### 📍 {t['dealers_title']}")
+                
                 if cur_lat and cur_lat != 0.0:
                     gps_url = f"https://www.google.com/maps/search/Agrovet+Fertilizer/@{cur_lat},{cur_lon},14z"
                     st.markdown(f'<a href="{gps_url}" target="_blank"><div style="background:#16a34a;color:white;padding:.6rem;border-radius:8px;text-align:center;font-weight:bold;margin-bottom:1rem;">🌍 Find Agrovets Near Me</div></a>', unsafe_allow_html=True)
-                for d in dealers:
-                    if d["county"] == "All":
-                        st.markdown(f"**{d['name']}** — Available at {selected_county} depot")
+                
+                for d in dealers[:5]: # Show top 5 closest
+                    dist_label = f"({d['distance']} km away)" if "distance" in d else f"({d['town']})"
+                    if d.get("county") == "All":
+                        st.markdown(f"**{d['name']}** — National Depot")
                     else:
-                        st.markdown(f"**{d['name']}** ({d['town']})")
+                        st.markdown(f"**{d['name']}** {dist_label}")
                         q = urllib.parse.quote_plus(f"{d['name']} {d['town']} Kenya")
                         st.markdown(f'<a href="https://www.google.com/maps/search/?api=1&query={q}" target="_blank"><div style="background:#2563eb;color:white;padding:.4rem 1rem;border-radius:6px;text-align:center;font-size:.85rem;font-weight:bold;width:fit-content;margin-bottom:1rem;">🗺️ View on Map</div></a>', unsafe_allow_html=True)
 
