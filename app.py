@@ -567,14 +567,14 @@ with tab_farmer:
                     gps_url = f"https://www.google.com/maps/search/Agrovet+Fertilizer/@{cur_lat},{cur_lon},14z"
                     st.markdown(f'<a href="{gps_url}" target="_blank"><div style="background:#16a34a;color:white;padding:.6rem;border-radius:8px;text-align:center;font-weight:bold;margin-bottom:1rem;">🌍 Find Agrovets Near Me</div></a>', unsafe_allow_html=True)
                 
-                for d in dealers[:5]: # Show top 5 closest
-                    dist_label = f"({d['distance']} km away)" if "distance" in d else f"({d['town']})"
-                    if d.get("county") == "All":
-                        st.markdown(f"**{d['name']}** — National Depot")
-                    else:
+                if dealers:
+                    for d in dealers[:5]: # Show top 5 closest
+                        dist_label = f"({d['distance']} km away)" if "distance" in d else f"({d['town']})"
                         st.markdown(f"**{d['name']}** {dist_label}")
                         q = urllib.parse.quote_plus(f"{d['name']} {d['town']} Kenya")
                         st.markdown(f'<a href="https://www.google.com/maps/search/?api=1&query={q}" target="_blank"><div style="background:#2563eb;color:white;padding:.4rem 1rem;border-radius:6px;text-align:center;font-size:.85rem;font-weight:bold;width:fit-content;margin-bottom:1rem;">🗺️ View on Map</div></a>', unsafe_allow_html=True)
+                else:
+                    st.warning("⚠️ No local dealers found within 50km. Please check national distributors.")
 
                 st.markdown("### 📤 Share Results")
                 tl    = result.get("timeline", {})
